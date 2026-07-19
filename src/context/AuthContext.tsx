@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.warn('[NOIRRIDE PROTOCOL] Account deletion detected via onSnapshot. Revoking access.');
               setDeletedAnnouncement('Contul tău a fost șters de către un administrator.');
               setUser(null);
-              auth.signOut().catch(() => {});
+              auth.signOut().catch(() => { });
               return;
             }
             baseProfileData = {
@@ -169,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[DEBUG ADMIN STATE] Target cleanUid:', cleanUid, 'Length:', cleanUid.length);
           console.log('[DEBUG ADMIN STATE] Document ID:', snap.id, 'Length:', snap.id.length);
           console.log('[DEBUG ADMIN STATE] Document exists:', snap.exists());
-          
+
           if (snap.exists()) {
             const docData = snap.data();
             console.log('[DEBUG ADMIN STATE] Raw document data:', JSON.stringify(docData, null, 2));
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log(`[DEBUG ADMIN STATE] Key: "${key}", Value: "${docData[key]}", Type: "${typeof docData[key]}"`);
               });
             }
-            
+
             // Verificăm dacă documentul nu are explicit `isAdmin: false`
             const isValidAdmin = docData && (docData.isAdmin === true || docData.role === 'admin' || docData.isAdmin !== false);
             isAdminFromDoc = !!isValidAdmin;
@@ -202,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isAdminFromQueryUid = false;
           }
           syncSingleSourceOfTruth();
-        }, () => {});
+        }, () => { });
 
         // Sursa Unică de Adevăr (#3): Interogare după câmpul `email` în `admin_roles`
         if (cleanEmail) {
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAdminFromQueryEmail = false;
             }
             syncSingleSourceOfTruth();
-          }, () => {});
+          }, () => { });
         }
       } catch (e) {
         console.warn('[NOIRRIDE PROTOCOL] Could not attach admin_roles onSnapshots:', e);
