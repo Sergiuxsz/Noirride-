@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "genial-charter-477621-j2",
+    "staging": "genial-charter-477621-j2",
+    "Staging": "genial-charter-477621-j2"
+  },
+  "targets": {},
+  "etags": {}
+}

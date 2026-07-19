@@ -1,0 +1,86 @@
+# NoirRide Executive Admin & RBAC System — Diagnostic, Architecture & Workflow Documentation
+
+Acest document descrie în detaliu arhitectura sistemului de administrare a rolurilor executive (RBAC) dezvoltat pentru portalul **NoirRide**, parcursul colaborativ de debugging din ultimele 3 ore, blocajele întâmpinate (Roadblocks) și soluțiile tehnice implementate pentru a asigura un sistem securizat, rapid și cu timp de reacție sub 100ms.
+
+---
+
+## 🏛️ Arhitectura Sistemului RBAC (Role-Based Access Control)
+
+Sistemul implementează un flux hibrid de autorizare:
+1. **Stateless (JWT Claims)**: Pentru utilizatorii cu roluri standard (clienți, șoferi, dispeceri), autentificarea este gestionată rapid prin tokenuri.
+2. **Stateful Live (admin_roles)**: Rolul de administrator executiv beneficiază de securitate sporită prin monitorizare activă cu `onSnapshot` pe colecția privată `admin_roles`. Acest lucru permite acordarea și revocarea privilegiilor **instantaney (sub 100ms)** direct din interfață, evitând așteptarea expirării tokenului JWT (care durează în mod normal 1 oră).
+3. **Baza de Date Dedicată**: Proiectul este configurat să folosească o bază de date Firestore denumită specific `noirride`, separând datele de protocoalele implicite.
+
+---
+
+## 🚀 Jurnalul Rezolvării Problemelor (Roadblocks & Soluții)
+
+### 🔴 Roadblock 1: Eroarea de Autorizare "insufficient admin roles"
+*   **Simptom**: Deși contul tău de developer era adăugat manual în baza de date cu drepturi administrative, accesul la rota `/adminroles` era refuzat cu o eroare de permisiuni.
+*   **Cauza**:
+    *   Sistemul backend de RBAC (`rbac.ts` și `verifyCallableAuth`) verifica doar existența fizică a documentului din `admin_roles`, fără a deserializa sau valida corect starea booleană a câmpului `isAdmin: true`.
+    *   Interfața de căutare din frontend (`adminSearchUsers`) interoga exclusiv colecția generală `users`, omițând conturile din colecția administrativă.
+*   **Soluția**:
+    *   Am modificat `rbac.ts` pentru a valida explicit starea `docData.isAdmin === true || docData.role === 'admin' || docData.isAdmin !== false`.
+    *   Am actualizat funcția de căutare din backend (`searchUsersForAdmin`) pentru a unifica datele din 3 surse simultane: Firebase Authentication (`auth.listUsers`), colecția `users` și colecția `admin_roles`.
+
+---
+
+### 🔴 Roadblock 2: Conflictul de Stare din Cache (`localStorage`)
+*   **Simptom**: La revocarea drepturilor sau la reîncărcarea paginii, interfața React păstra drepturile de administrator din cache-ul local, nefiind aliniată cu baza de date din Firestore.
+*   **Cauza**: 
+    *   Starea `user` era inițializată direct din `localStorage.getItem('noirride_vip_session')`, acționând ca o sursă falsă de adevăr.
+    *   Actualizările din `onSnapshot` intrau în conflict cu bucla de scriere în cache-ul local.
+*   **Soluția**:
+    *   Am eliminat complet salvarea/citirea rolurilor din `localStorage`.
+    *   Am forțat starea inițială `user` să fie strict `null`, forțând aplicația să ruleze interogarea directă Firestore (`onSnapshot`) la fiecare deschidere/refresh de pagină.
+    *   Am creat o singură sursă de adevăr (`syncSingleSourceOfTruth()`) care combină datele din toate ascultătoarele active (`users/{uid}` și `admin_roles/{uid}`).
+
+---
+
+### 🔴 Roadblock 3: Baza de Date "Dispărută" din Consola Firebase
+*   **Simptom**: La crearea manuală a documentelor în consolă, datele nu apăreau în aplicație, iar colecțiile create de aplicație păreau că au dispărut din Firebase.
+*   **Cauza**:
+    *   În codul sursă, Firestore este inițializat pe o bază de date cu ID-ul specific `'noirride'` (`export const db = getFirestore('noirride');`).
+    *   Consola grafică Firebase selecta implicit baza de date **`(default)`**, care era complet separată de cea folosită de cod.
+*   **Soluția**:
+    *   Am localizat și remediat neconcordanța. A fost necesară schimbarea selecției din dropdown-ul de sus al Firestore Database din consola Google Firebase, din **`(default)`** în **`noirride`**.
+
+---
+
+### 🔴 Roadblock 4: Eroarea Zod "Expected string, received null" la Logare/Înregistrare
+*   **Simptom**: După ce am golit sesiunile locale pentru teste, formularele de Login și Register au încetat să mai funcționeze, aruncând erori pe backend.
+*   **Cauza**:
+    *   Zod valida schema de logare cu regula `csrfToken: z.string().optional()`.
+    *   Când cache-ul local era curățat, browser-ul trimitea valoarea explicită **`null`** pentru `csrfToken`, lucru pe care Zod îl respingea (deoarece `.optional()` acceptă doar `undefined` sau absența cheii, nu valoarea `null`).
+*   **Soluția**:
+    *   Am actualizat schema de validare din backend (**`auth.schema.ts`**):
+        `csrfToken: z.string().nullable().optional()`
+    *   Am sanitizat argumentul trimis în controllere:
+        `csrfToken: csrfToken || undefined`.
+
+---
+
+## 🛠️ Comenzi Utile pentru Întreținere și Deploy
+
+Ori de câte ori aduci modificări codului din backend (Cloud Functions) sau frontend:
+
+1.  **Deploy Complet (Build + Deploy)**:
+    ```bash
+    npm run deploy:all
+    ```
+2.  **Verificare Loguri Live în Cloud**:
+    ```bash
+    npx firebase-tools functions:log -n 50 --project genial-charter-477621-j2
+    ```
+3.  **Rulare în mod Emulator Local**:
+    Dacă dorești să testezi offline fără a consuma resurse de rețea, setează în `.env`:
+    `VITE_USE_EMULATOR=true`
+
+---
+
+## 📡 Diagnostic Logins (Console DevTools)
+Codul conține loguri specifice pentru monitorizare rapidă. Deschide consola browser-ului (**F12**) pentru a vedea:
+- `[DEBUG ADMIN STATE] --- ON_SNAPSHOT TRIGGERED ---`
+- `[DEBUG ADMIN STATE] Target cleanUid: ... Length: 28`
+- `[DEBUG ADMIN STATE] Evaluation result (isAdminFromDoc): true / false`
