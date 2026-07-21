@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0A0B0E;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1A1D28;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #D4AF37;
+  }
+  body {
+    scrollbar-color: #1A1D28 #0A0B0E;
+    scrollbar-width: thin;
+  }
+}
+
 @layer components {
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
@@ -45,6 +66,20 @@
     }
   }
 
+  @keyframes pulseRing {
+    0% {
+      transform: scale(0.5);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
   }
@@ -55,5 +90,9 @@
 
   .animate-bg-pulse-seconds {
     animation: bgPulseSeconds 4s ease-in-out infinite;
+  }
+
+  .animate-pulse-ring {
+    animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

@@ -3,23 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Navigation, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import { TripTimeline } from '../../components/booking/TripTimeline';
 import { DriverCard } from '../../components/booking/DriverCard';
+import { ClientLiveMap } from '../../components/booking/ClientLiveMap';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useRideContext } from '../../context/RideContext';
+import type { RideStatus } from '../../types';
 
 export const UpcomingRidePage: React.FC = () => {
   const navigate = useNavigate();
-  const { confirmedRide, cancelConfirmedRide } = useRideContext();
+  const { confirmedRide, cancelConfirmedRide, updateRideStatus } = useRideContext();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [etaSeconds, setEtaSeconds] = useState<number>(480);
 
-  // Check if there is an active confirmed ride in context
   const activeTrip = confirmedRide;
-
-  const handleConfirmCancel = () => {
-    cancelConfirmedRide();
-    setIsCancelModalOpen(false);
-  };
 
   if (!activeTrip) {
     return (
@@ -34,6 +31,78 @@ export const UpcomingRidePage: React.FC = () => {
     );
   }
 
+  const mapTelemetryStatus = (status: string): RideStatus => {
+    switch (status) {
+      case 'driver_en_route':
+        return 'EN_ROUTE';
+      case 'driver_arrived':
+        return 'ARRIVED';
+      case 'in_progress':
+        return 'IN_PROGRESS';
+      case 'completed':
+        return 'COMPLETED';
+      default:
+        return 'EN_ROUTE';
+    }
+  };
+
+  const handleTelemetryUpdate = (status: string, currentEtaSeconds: number) => {
+    if (!activeTrip || ['CANCELLED', 'COMPLETED'].includes(activeTrip.status)) return;
+    
+    const mappedStatus = mapTelemetryStatus(status);
+    setEtaSeconds(currentEtaSeconds);
+
+    if (mappedStatus !== activeTrip.status) {
+      updateRideStatus(activeTrip.id, mappedStatus);
+    }
+  };
+
+  const handleConfirmCancel = () => {
+    cancelConfirmedRide();
+    setIsCancelModalOpen(false);
+  };
+
+  const getBannerDetails = () => {
+    switch (activeTrip.status) {
+      case 'EN_ROUTE':
+        return {
+          title: `Chauffeur ${activeTrip.driverName || 'Executive Chauffeur'} is arriving in ${Math.ceil(etaSeconds / 60)} min`,
+          description: `Vehicle GPS tracking confirmed on route to ${activeTrip.pickupLocation.split(',')[0]}.`,
+          color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+          dotColor: 'bg-emerald-400'
+        };
+      case 'ARRIVED':
+        return {
+          title: `Chauffeur ${activeTrip.driverName || 'Executive Chauffeur'} has arrived!`,
+          description: `Your chauffeur is waiting at the pickup location: ${activeTrip.pickupLocation.split(',')[0]}.`,
+          color: 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]',
+          dotColor: 'bg-[#D4AF37]'
+        };
+      case 'IN_PROGRESS':
+        return {
+          title: `Active luxury transfer in progress`,
+          description: `Arriving at destination in ${Math.ceil(etaSeconds / 60)} min. Enjoy the ride.`,
+          color: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+          dotColor: 'bg-blue-400'
+        };
+      case 'COMPLETED':
+        return {
+          title: `Luxury transfer completed`,
+          description: `Thank you for choosing NoirRide. Your receipt has been sent.`,
+          color: 'bg-zinc-500/10 border-zinc-500/30 text-zinc-400',
+          dotColor: 'bg-zinc-400'
+        };
+      default:
+        return {
+          title: `Chauffeur ${activeTrip.driverName || 'Executive Chauffeur'} is assigned`,
+          description: `GPS tracking will activate shortly.`,
+          color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+          dotColor: 'bg-emerald-400'
+        };
+    }
+  };
+
+  const banner = getBannerDetails();
   const isCancelled = activeTrip.status === 'CANCELLED';
 
   return (
@@ -72,15 +141,15 @@ export const UpcomingRidePage: React.FC = () => {
 
         {/* Status Alert Banner */}
         {!isCancelled ? (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 animate-pulse-subtle">
-            <div className="flex items-center gap-3 text-emerald-400">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+          <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 animate-pulse-subtle ${banner.color}`}>
+            <div className="flex items-center gap-3">
+              <span className={`w-3 h-3 rounded-full animate-ping ${banner.dotColor}`} />
               <div>
                 <span className="font-serif font-bold text-sm block">
-                  Chauffeur {activeTrip.driverName} is arriving in 8 min
+                  {banner.title}
                 </span>
-                <span className="text-xs text-[#94A3B8]">
-                  Vehicle GPS tracking confirmed on route to {activeTrip.pickupLocation.split(',')[0]}.
+                <span className="text-xs opacity-80">
+                  {banner.description}
                 </span>
               </div>
             </div>
@@ -142,8 +211,20 @@ export const UpcomingRidePage: React.FC = () => {
               </div>
             </div>
 
+              {/* Client Live Telemetry Map (SSOT) */}
+              <div className="h-[300px] sm:h-[400px] w-full bg-[#0A0B10]">
+                <ClientLiveMap
+                  rideId={activeTrip.id}
+                  vehicleId={activeTrip.vehicleId}
+                  vehicleName={activeTrip.vehicleName}
+                  pickupLocation={activeTrip.pickupLocation}
+                  destination={activeTrip.destination}
+                  onTelemetryUpdate={handleTelemetryUpdate}
+                />
+              </div>
+
             {/* Timeline */}
-            <TripTimeline status={activeTrip.status} etaMinutes={8} />
+            <TripTimeline status={activeTrip.status} etaMinutes={Math.max(1, Math.ceil(etaSeconds / 60))} />
           </div>
 
           {/* Right Column: Driver & Vehicle Card */}

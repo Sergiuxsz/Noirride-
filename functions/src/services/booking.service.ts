@@ -48,6 +48,8 @@ export class BookingService {
       serviceType: payload.serviceType,
       vehicleId: payload.vehicleId,
       vehicleName,
+      driverId: payload.driverId,
+      driverName: payload.driverName,
       status: 'SCHEDULED',
       price,
       notes: payload.specialRequests || 'VIP Chauffeur reservation initialized.',
@@ -58,13 +60,26 @@ export class BookingService {
     // Persist to Firestore via Repository
     await rideRepo.create(newRide);
 
-    // Assign driver via Dispatch Service
-    const assignedRide = await dispatchService.assignDriverToRide(newRide.id);
+    // Trigger dispatch notification (for the unassigned ride)
+    await dispatchService.notifyOperator(newRide);
 
-    // Trigger dispatch notification
-    await dispatchService.notifyOperator(assignedRide);
+    // Automatically trigger the real-time server for dispatch and simulation
+    try {
+      const axios = require('axios');
+      const REALTIME_SERVER_URL = process.env.REALTIME_SERVER_URL || 'http://localhost:8080';
+      
+      // Await the call so Firebase Functions doesn't freeze the container before the HTTP request leaves
+      await axios.post(`${REALTIME_SERVER_URL}/api/dispatch`, {
+        rideId: newRide.id,
+        pickupLocation: newRide.pickupLocation,
+        destination: newRide.destination,
+        preferredDriverId: payload.driverId
+      }, { timeout: 3000 });
+    } catch (err: any) {
+      console.error('[Dispatch Trigger] Could not trigger dispatch API:', err.message);
+    }
 
-    return assignedRide;
+    return newRide;
   }
 
   async cancelBooking(rideId: string, notes?: string): Promise<void> {

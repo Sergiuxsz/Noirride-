@@ -11,8 +11,10 @@ export interface CreateBookingPayload {
   date: string;
   time: string;
   passengers: number;
-  serviceType: 'airport' | 'hourly' | 'intercity';
+  serviceType: 'airport' | 'hourly' | 'intercity' | 'private-chauffeur';
   vehicleId: string;
+  driverId?: string;
+  driverName?: string;
   specialRequests?: string;
 }
 
@@ -61,6 +63,18 @@ export const api = {
     return response.data;
   },
 
+  async getVehicles(): Promise<any[]> {
+    const callable = httpsCallable<void, { success: boolean; vehicles: any[] }>(functions, 'getVehicles');
+    const response = await callable();
+    return response.data.vehicles;
+  },
+
+  async listUserRides(): Promise<Ride[]> {
+    const callable = httpsCallable<void, { success: boolean; rides: Ride[] }>(functions, 'listUserRides');
+    const response = await callable();
+    return response.data.rides;
+  },
+
   async registerVIPUser(payload: RegisterVIPPayload): Promise<{ success: boolean; uid: string; role?: UserRole; csrfToken?: string; message: string }> {
     const callable = httpsCallable<RegisterVIPPayload, { success: boolean; uid: string; role?: UserRole; csrfToken?: string; message: string }>(functions, 'registerVIPUser');
     const response = await callable(payload);
@@ -101,5 +115,110 @@ export const api = {
     const callable = httpsCallable<{ email: string; code: string }, { success: boolean; valid: boolean; message: string }>(functions, 'verifyProtocolCode');
     const response = await callable({ email, code });
     return response.data;
+  },
+
+  async startRideSimulation(
+    rideId: string, 
+    pickupLocation: string, 
+    destination: string, 
+    pickupCoords?: { lat: number; lng: number }, 
+    destCoords?: { lat: number; lng: number },
+    preferredDriverId?: string
+  ): Promise<any> {
+    const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${serverUrl}/api/rides/simulate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rideId,
+          pickupLocation,
+          destination,
+          pickupCoords,
+          destCoords,
+          preferredDriverId
+        })
+      });
+      return await response.json();
+    } catch (err) {
+      console.error('[API] startRideSimulation failed:', err);
+      throw err;
+    }
+  },
+
+  async calculatePriceRemote(payload: {
+    vehicleId: string;
+    serviceType: string;
+    distanceMeters?: number;
+    durationSeconds?: number;
+  }): Promise<{
+    baseFare: number;
+    serviceFee: number;
+    tax: number;
+    total: number;
+    redisCacheHit?: boolean;
+    redisErrorHandled?: boolean;
+  }> {
+    const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${serverUrl}/api/rides/calculate-price`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error('Price calculation API returned non-OK status');
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn('[API] calculatePriceRemote failed, falling back to local calculation:', err);
+      throw err;
+    }
+  },
+
+  async getFleetStatus(): Promise<any[]> {
+    const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${serverUrl}/api/fleet`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch fleet status');
+      }
+      return await response.json();
+    } catch (err) {
+      console.error('[API] getFleetStatus failed:', err);
+      // Return empty array on failure so UI doesn't crash
+      return [];
+    }
+  },
+
+  async getActiveRides(): Promise<any[]> {
+    const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${serverUrl}/api/rides/active`);
+      if (!response.ok) throw new Error('Failed to fetch active rides');
+      return await response.json();
+    } catch (err) {
+      console.error('[API] getActiveRides failed:', err);
+      return [];
+    }
+  },
+
+  async getLiveRideDetails(rideId: string): Promise<any | null> {
+    const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${serverUrl}/api/rides/${rideId}`);
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error('Failed to fetch ride details');
+      }
+      return await response.json();
+    } catch (err) {
+      console.error('[API] getLiveRideDetails failed:', err);
+      return null;
+    }
   }
 };

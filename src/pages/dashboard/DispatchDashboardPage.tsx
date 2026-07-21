@@ -4,6 +4,7 @@ import { StatsCard } from '../../components/dashboard/StatsCard';
 import { FilterBar } from '../../components/dashboard/FilterBar';
 import { RidesTable } from '../../components/dashboard/RidesTable';
 import { RideDetailPanel } from '../../components/dashboard/RideDetailPanel';
+import { FleetLiveMap } from '../../components/dashboard/FleetLiveMap';
 import { useRideFilters } from '../../hooks/useRideFilters';
 import type { Ride } from '../../types';
 
@@ -86,6 +87,9 @@ export const DispatchDashboardPage: React.FC = () => {
           </div>
           <span className="font-mono text-[11px] text-[#64748B]">Updated just now</span>
         </div>
+
+        {/* Real-Time Mapbox Integration */}
+        <FleetLiveMap />
 
         {/* Filter & Search Controls */}
         <FilterBar

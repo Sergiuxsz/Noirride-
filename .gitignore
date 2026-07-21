@@ -20,6 +20,9 @@ out/
 .nuxt/
 .firebase/
 functions/lib/
+dev-dist/
+realtime-server/dist/
+realtime-server/node_modules/
 
 # Environment variables
 .env
@@ -27,6 +30,9 @@ functions/lib/
 .env.development.local
 .env.test.local
 .env.production.local
+service-account.json
+realtime-server/service-account.json
+*.service-account.json
 
 # Cache and temporary files
 .cache/

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Star, Phone, MessageSquare, Shield, Award, User } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useRideContext } from '../../context/RideContext';
 
 interface DriverCardProps {
   driverName: string;
@@ -11,9 +12,19 @@ interface DriverCardProps {
 
 export const DriverCard: React.FC<DriverCardProps> = ({
   driverName,
+  driverId,
   vehicleName,
-  licensePlate = 'NOIR-VIP',
+  licensePlate,
 }) => {
+  const { drivers } = useRideContext();
+  const matchedDriver = drivers.find((d) => d.id === driverId || d.name === driverName);
+  
+  const photo = matchedDriver?.photo;
+  const rating = matchedDriver?.rating || 5.0;
+  const rides = matchedDriver?.completedRides || 1000;
+  const plate = licensePlate || matchedDriver?.licensePlate || 'NOIR-VIP';
+  const tagline = matchedDriver?.tagline;
+
   const [photoError, setPhotoError] = useState(false);
   const [actionAlert, setActionAlert] = useState<string | null>(null);
 
@@ -44,11 +55,11 @@ export const DriverCard: React.FC<DriverCardProps> = ({
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#D4AF37] bg-[#1A1D28] flex items-center justify-center flex-shrink-0">
-          {!photoError ? (
+          {photo && !photoError ? (
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200"
+              src={photo}
               alt={driverName}
               onError={() => setPhotoError(true)}
               className="w-full h-full object-cover"
@@ -61,18 +72,23 @@ export const DriverCard: React.FC<DriverCardProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h4 className="font-serif text-lg font-bold text-[#F8FAFC] truncate">
-              {driverName}
+              {driverName || matchedDriver?.name || 'Executive Chauffeur'}
             </h4>
             <Award size={16} className="text-[#D4AF37] flex-shrink-0" />
           </div>
           <div className="flex items-center gap-3 text-xs text-[#94A3B8] mt-1">
             <span className="inline-flex items-center text-[#D4AF37] font-semibold">
-              <Star size={13} className="fill-current mr-1" /> 4.99 Rating
+              <Star size={13} className="fill-current mr-1" /> {rating} Rating
             </span>
-            <span>• 1,400+ Rides</span>
+            <span>• {rides.toLocaleString()} Trips</span>
           </div>
-          <p className="text-xs text-[#E2E8F0] mt-1 truncate">
-            {vehicleName} • <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-[11px] text-[#D4AF37]">{licensePlate}</span>
+          {tagline && (
+            <p className="text-xs text-[#D4AF37] italic mt-1 font-serif">
+              "{tagline}"
+            </p>
+          )}
+          <p className="text-xs text-[#E2E8F0] mt-1.5 truncate">
+            {vehicleName} • <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded text-[11px] text-[#D4AF37]">{plate}</span>
           </p>
         </div>
       </div>

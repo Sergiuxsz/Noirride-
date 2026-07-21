@@ -9,8 +9,10 @@ export const CreateBookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format.'),
   time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM 24-hour format.'),
   passengers: z.number().int().min(1).max(12),
-  serviceType: z.enum(['airport', 'hourly', 'intercity']),
+  serviceType: z.enum(['airport', 'hourly', 'intercity', 'private-chauffeur']),
   vehicleId: z.string().min(1, 'A vehicle must be selected.'),
+  driverId: z.string().optional(),
+  driverName: z.string().optional(),
   specialRequests: z.string().optional(),
 });
 

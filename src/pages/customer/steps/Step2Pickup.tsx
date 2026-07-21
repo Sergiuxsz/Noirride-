@@ -1,10 +1,11 @@
 import React from 'react';
 import { ArrowLeft, MapPin, Navigation, Minus, Plus, Users } from 'lucide-react';
-import { SearchBar } from '../../../components/booking/SearchBar';
+import { AddressAutocomplete } from '../../../components/booking/AddressAutocomplete';
 import type { BookingFormState } from '../../../types';
 
 interface Step2PickupProps {
   bookingState: BookingFormState;
+  updateField: (field: keyof BookingFormState, value: any) => void;
   destinationInput: string;
   pickupInput: string;
   setPickupInput: (val: string) => void;
@@ -17,6 +18,7 @@ interface Step2PickupProps {
 
 export const Step2Pickup: React.FC<Step2PickupProps> = ({
   bookingState,
+  updateField,
   destinationInput,
   pickupInput,
   setPickupInput,
@@ -50,15 +52,20 @@ export const Step2Pickup: React.FC<Step2PickupProps> = ({
       </div>
 
       <form onSubmit={handleStep2Submit} className="flex flex-col gap-6">
-        <SearchBar
+        <AddressAutocomplete
           value={pickupInput}
           onChange={setPickupInput}
-          onSubmit={handleStep2Submit}
+          onSelectCoordinates={(lat, lng) => updateField('pickupCoordinates', { lat, lng })}
           placeholder="Pickup hotel, airport, or residence..."
-          buttonLabel="Select Fleet"
-          icon={<MapPin className="text-[#D4AF37] flex-shrink-0" size={20} />}
+          icon={<MapPin className="text-[#D4AF37] flex-shrink-0 z-10" size={20} />}
           error={errors.pickup}
         />
+        <button
+          type="submit"
+          className="bg-[#D4AF37] hover:bg-[#C5A030] text-[#0A0B0E] px-6 py-3.5 rounded-xl font-serif text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#D4AF37]/10 w-full"
+        >
+          Select Fleet
+        </button>
 
         {/* Passengers stepper */}
         <div className="flex flex-col gap-2">

@@ -1,5 +1,5 @@
 export type RideStatus = 'SCHEDULED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type ServiceType = 'airport' | 'hourly' | 'intercity';
+export type ServiceType = 'airport' | 'hourly' | 'intercity' | 'private-chauffeur';
 
 export interface VehicleModel {
   id: string;

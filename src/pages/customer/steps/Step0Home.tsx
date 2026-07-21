@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, CheckCircle, Clock } from 'lucide-react';
+import { Search, ChevronDown, CheckCircle, Clock, MapPin, Loader2, Home, Briefcase, History } from 'lucide-react';
 import type { ServiceType } from '../../../types';
+import { usePlacesAutocomplete, SavedLocation } from '../../../hooks/usePlacesAutocomplete';
 
 import airportImg from '../../../assets/airport_transfer.png';
 import hourlyImg from '../../../assets/hourly_chauffeur.png';
@@ -14,7 +15,7 @@ interface Step0HomeProps {
   pickupTimeOption: string;
   setPickupTimeOption: (val: string) => void;
   applyTimeSelection: (opt: string) => void;
-  handleServiceCardClick: (type: ServiceType) => void;
+  handleServiceCardClick: (type: ServiceType, overrideDestination?: string) => void;
   goTo: (step: number) => void;
 }
 
@@ -30,6 +31,78 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'rides' | 'dispatch'>('rides');
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
+  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
+  const autocompleteRef = React.useRef<HTMLFormElement>(null);
+
+  const {
+    input,
+    setInput,
+    predictions,
+    loading,
+    recentSearches,
+    favorites,
+    saveRecentSearch,
+    getPlaceCoordinates,
+    clearRecentSearches
+  } = usePlacesAutocomplete(destinationInput);
+
+  React.useEffect(() => {
+    if (destinationInput !== input) {
+       setInput(destinationInput);
+    }
+  }, [destinationInput]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setIsAutocompleteOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    setDestinationInput(val);
+    if (!isAutocompleteOpen) setIsAutocompleteOpen(true);
+  };
+
+  const handleSelectPlace = async (placeId: string, description: string) => {
+    setInput(description);
+    setDestinationInput(description);
+    setIsAutocompleteOpen(false);
+    
+    // Auto-proceed to next step
+    applyTimeSelection(pickupTimeOption);
+    goTo(1);
+
+    try {
+      const details = await getPlaceCoordinates(placeId);
+      if (details) {
+        saveRecentSearch({
+          id: placeId,
+          label: details.formattedAddress || description,
+          address: details.formattedAddress || description,
+          lat: details.lat,
+          lng: details.lng,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to get place details', err);
+    }
+  };
+
+  const handleSelectSaved = (saved: SavedLocation) => {
+    if (saved.lat && saved.lng && saved.address !== 'Add Home' && saved.address !== 'Add Work') {
+      setInput(saved.address);
+      setDestinationInput(saved.address);
+      setIsAutocompleteOpen(false);
+      applyTimeSelection(pickupTimeOption);
+      goTo(1);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,21 +112,54 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
     }
   };
 
+  const handleAirportClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          // Bucharest bounds roughly: lat 44.3 to 44.6, lng 25.9 to 26.3
+          const isOutsideBucharest = latitude < 44.3 || latitude > 44.6 || longitude < 25.9 || longitude > 26.3;
+          handleServiceCardClick(isOutsideBucharest ? 'intercity' : 'airport', 'Otopeni Airport');
+        },
+        (error) => {
+          console.warn('Geolocation blocked/error, defaulting to airport', error);
+          handleServiceCardClick('airport', 'Otopeni Airport');
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      handleServiceCardClick('airport', 'Otopeni Airport');
+    }
+  };
+
+  const handleHourlyClick = () => {
+    setPickupTimeOption('later');
+    applyTimeSelection('later');
+    handleServiceCardClick('hourly');
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 pt-0 pb-44 space-y-4 animate-fade-in relative">
       {/* Sticky Header Area containing Search Bar and Golden Line Separation */}
       <div className="sticky top-[48px] z-30 bg-[#0A0B0E] pt-2 pb-1 -mx-4 px-4">
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="relative">
+        <form onSubmit={handleSearchSubmit} className="relative" ref={autocompleteRef}>
           <div className="flex items-center bg-[#181A20]/90 border border-white/10 rounded-full py-2.5 px-4 backdrop-blur-md shadow-xl">
             <Search size={18} className="text-[#8E9BAE] mr-3 flex-shrink-0" />
             <input
               type="text"
-              value={destinationInput}
-              onChange={(e) => setDestinationInput(e.target.value)}
+              value={input}
+              onChange={handleInputChange}
+              onFocus={() => setIsAutocompleteOpen(true)}
               placeholder="Where to?"
               className="flex-1 bg-transparent text-sm sm:text-base text-[#F8FAFC] placeholder-[#8E9BAE] font-sans focus:outline-none"
+              autoComplete="off"
             />
+            {loading && (
+              <div className="mr-3 animate-spin text-[#D4AF37]">
+                <Loader2 size={16} />
+              </div>
+            )}
             <div className="h-5 w-[1px] bg-white/15 mx-3" />
             <div className="relative">
               <button
@@ -106,9 +212,71 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
               ))}
             </div>
           )}
-        </form>
 
-        {/* Thin gold horizontal rule directly below search bar */}
+          {/* Autocomplete Dropdown */}
+          {isAutocompleteOpen && ((input && predictions.length > 0) || (input && !loading && predictions.length === 0) || ((!input || input.length < 2) && recentSearches.length > 0)) && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D28] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in max-h-80 overflow-y-auto">
+              {/* Active Search Predictions */}
+              {input && predictions.length > 0 && (
+                <div className="p-2">
+                  {predictions.map((prediction) => (
+                    <button
+                      key={prediction.placeId}
+                      type="button"
+                      onClick={() => handleSelectPlace(prediction.placeId, prediction.description)}
+                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg transition-colors flex items-start gap-3 group"
+                    >
+                      <MapPin size={18} className="text-[#94A3B8] group-hover:text-[#D4AF37] mt-0.5 shrink-0 transition-colors" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-[#F8FAFC] truncate">{prediction.mainText}</p>
+                        {prediction.secondaryText && (
+                          <p className="text-xs text-[#64748B] truncate">{prediction.secondaryText}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* No results state */}
+              {input && !loading && predictions.length === 0 && (
+                <div className="p-6 text-center text-sm text-[#64748B]">
+                  No places found for "{input}"
+                </div>
+              )}
+
+              {/* History and Favorites */}
+              {(!input || input.length < 2) && (
+                <div className="p-2 space-y-4">
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between px-4 py-2">
+                        <h4 className="text-[10px] uppercase tracking-widest text-[#64748B] font-semibold">Recent</h4>
+                        <button type="button" onClick={clearRecentSearches} className="text-[10px] text-[#D4AF37] hover:text-[#F8FAFC] transition-colors">Clear</button>
+                      </div>
+                      {recentSearches.map((recent) => (
+                        <button
+                          key={recent.id}
+                          type="button"
+                          onClick={() => handleSelectSaved(recent)}
+                          className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-3 group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                            <History size={14} className="text-[#94A3B8]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-[#F8FAFC] truncate">{recent.label}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </form>
         <div className="w-full h-[1px] bg-[#D4AF37]/60 mt-3.5 mb-1" />
       </div>
 
@@ -174,31 +342,31 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
           SUGGESTIONS
         </h2>
         <div className="max-h-[230px] overflow-y-auto pr-1.5 grid grid-cols-1 gap-3.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-thumb]:bg-[#D4AF37]/40 hover:[&::-webkit-scrollbar-thumb]:bg-[#D4AF37] [&::-webkit-scrollbar-thumb]:rounded-full">
-          {/* Card 1: Airplane hangar */}
+          {/* Card 1: Airport transfer */}
           <div
-            onClick={() => handleServiceCardClick('airport')}
+            onClick={handleAirportClick}
             className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={airportImg} alt="Airplane hangar" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
             <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Airport
+              Airport Transfer
             </span>
           </div>
 
           {/* Card 2: Private chauffeur */}
           <div
-            onClick={() => handleServiceCardClick('hourly')}
+            onClick={() => handleServiceCardClick('private-chauffeur')}
             className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={hourlyImg} alt="Private chauffeur" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
             <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Private chauffeur
+              Private Chauffeur
             </span>
           </div>
 
-          {/* Card 3: Car on the bridge */}
+          {/* Card 3: Outside City (Intercity) */}
           <div
             onClick={() => handleServiceCardClick('intercity')}
             className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
@@ -210,9 +378,9 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
             </span>
           </div>
 
-          {/* Card 4: Chauffeur fleet */}
+          {/* Card 4: Hourly Chauffeur */}
           <div
-            onClick={() => handleServiceCardClick('hourly')}
+            onClick={handleHourlyClick}
             className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={heroImg} alt="Chauffeur fleet" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />

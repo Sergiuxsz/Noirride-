@@ -517,7 +517,7 @@ export const seedDatabase = onCall(async (request) => {
         luggage: 3,
         basePrice: 750,
         ratePerHour: 580,
-        image: '/assets/fleet/phantom.png',
+        image: '/assets/fleet/bmw7.png',
         features: ['VR9 Ballistic Protection', 'Underbody Blast Shield', 'Self-Sealing Fuel Tank', 'Fresh Air Supply System'],
         isAvailable: true,
       },
@@ -530,7 +530,7 @@ export const seedDatabase = onCall(async (request) => {
         luggage: 3,
         basePrice: 380,
         ratePerHour: 300,
-        image: '/assets/fleet/maybach.png',
+        image: '/assets/fleet/mulsanne.png',
         features: ['Airline-Style Reclining Seats', 'Fold-Out Picnic Tables', 'Privacy Curtains', 'Naim for Bentley Audio'],
         isAvailable: true,
       },
@@ -542,9 +542,82 @@ export const seedDatabase = onCall(async (request) => {
       batch.set(ref, data, { merge: true });
     }
 
+    // Seed 4 chauffeurs
+    const mockDrivers = {
+      'drv-1': {
+        id: 'drv-1',
+        name: 'Vin Diesel',
+        rating: 5.0,
+        completedRides: 1970,
+        clearanceLevel: 'Top Secret',
+        phone: '+1 (555) 019-2470',
+        isAvailable: true,
+        photo: '/assets/drivers/vindiesel.png',
+        languages: ['EN', 'ES'],
+        vehicleMake: 'Dodge Charger SRT / Maybach',
+        licensePlate: 'FAST-001',
+        tagline: "I've got nothin' but time.",
+        location: { lat: 44.4268, lng: 26.1025 },
+        destination: null
+      },
+      'drv-2': {
+        id: 'drv-2',
+        name: 'Jason Statham',
+        rating: 4.99,
+        completedRides: 2450,
+        clearanceLevel: 'Top Secret',
+        phone: '+44 7700 900099',
+        isAvailable: true,
+        photo: '/assets/drivers/statham.png',
+        languages: ['EN', 'FR'],
+        vehicleMake: 'Audi A8 L W12 Security',
+        licensePlate: 'TRANSPORTER',
+        tagline: 'The Transporter — Precision, Speed & Discretion',
+        location: { lat: 44.4411, lng: 26.0964 },
+        destination: null
+      },
+      'drv-3': {
+        id: 'drv-3',
+        name: 'Jeremy Meeks',
+        rating: 4.95,
+        completedRides: 860,
+        clearanceLevel: 'Confidential',
+        phone: '+1 (555) 018-9922',
+        isAvailable: true,
+        photo: '/assets/drivers/meeks.jpg',
+        languages: ['EN', 'IT'],
+        vehicleMake: 'Rolls-Royce Phantom VIII',
+        licensePlate: 'HOT-MODEL',
+        tagline: 'High-Fashion Executive Protection Escort',
+        location: { lat: 44.4172, lng: 26.0664 },
+        destination: null
+      },
+      'drv-4': {
+        id: 'drv-4',
+        name: 'Baroian Sergiu-Ioan',
+        rating: 5.0,
+        completedRides: 9999,
+        clearanceLevel: 'Top Secret',
+        phone: '+40 722 000 777',
+        isAvailable: true,
+        photo: '/assets/drivers/sergiu.png',
+        languages: ['EN', 'RO', 'DE'],
+        vehicleMake: 'Armored Executive Custom',
+        licensePlate: 'SERGIU-VIP',
+        tagline: 'Average engine lifetime of 5 minutes , but vip styling tho ',
+        location: { lat: 44.4715, lng: 26.0822 },
+        destination: null
+      }
+    };
+
+    for (const [id, data] of Object.entries(mockDrivers)) {
+      const ref = db.collection('drivers').doc(id);
+      batch.set(ref, data, { merge: true });
+    }
+
     await batch.commit();
-    logger.info('[SessionController.seedDatabase] Exit: 6 executive vehicles successfully seeded into Firestore.');
-    return { success: true, message: '6 executive vehicles successfully seeded into Firestore.' };
+    logger.info('[SessionController.seedDatabase] Exit: 6 vehicles and 4 drivers seeded.');
+    return { success: true, message: 'Vehicles and drivers seeded into Firestore.' };
   } catch (error: any) {
     logger.error('[SessionController.seedDatabase] Seeding failed', {
       error: error.message || error,

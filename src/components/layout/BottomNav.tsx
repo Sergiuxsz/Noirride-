@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Car, Activity, User, Sparkles } from 'lucide-react';
-import telemetryImg from '../../assets/live_telemetry.png';
+import telemetryImg from '../../assets/live_telemetry.webp';
 import { useRideContext } from '../../context/RideContext';
 
 export const BottomNav: React.FC = () => {
@@ -23,6 +23,7 @@ export const BottomNav: React.FC = () => {
       active: currentPath === '/' && !window.location.hash,
       onClick: () => {
         if (currentPath === '/') {
+          window.dispatchEvent(new Event('resetBookingStep'));
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           navigate('/');

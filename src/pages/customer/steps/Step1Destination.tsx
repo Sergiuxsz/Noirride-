@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Plane, Compass, ShieldCheck } from 'lucide-react';
-import { SearchBar } from '../../../components/booking/SearchBar';
+import { AddressAutocomplete } from '../../../components/booking/AddressAutocomplete';
 import type { BookingFormState, ServiceType } from '../../../types';
 
 interface Step1DestinationProps {
@@ -52,10 +52,10 @@ export const Step1Destination: React.FC<Step1DestinationProps> = ({
       </div>
 
       <form onSubmit={handleStep1Submit} className="flex flex-col gap-6">
-        <SearchBar
+        <AddressAutocomplete
           value={destinationInput}
           onChange={setDestinationInput}
-          onSubmit={handleStep1Submit}
+          onSelectCoordinates={(lat, lng) => updateField('destinationCoordinates', { lat, lng })}
           placeholder="Airport, hotel, or address..."
           showTimeSelect
           timeOption={pickupTimeOption}
@@ -63,9 +63,15 @@ export const Step1Destination: React.FC<Step1DestinationProps> = ({
             setPickupTimeOption(opt);
             applyTimeSelection(opt);
           }}
-          buttonLabel="Continue"
           error={errors.destination}
         />
+        
+        <button
+          type="submit"
+          className="bg-[#D4AF37] hover:bg-[#C5A030] text-[#0A0B0E] px-6 py-3.5 rounded-xl font-serif text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#D4AF37]/10 w-full"
+        >
+          Continue
+        </button>
 
         {pickupTimeOption === 'later' && (
           <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-[#12141C] border border-white/10 animate-fade-in">

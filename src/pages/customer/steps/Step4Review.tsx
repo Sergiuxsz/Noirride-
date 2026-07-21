@@ -102,12 +102,29 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                 Special Requests / Flight Code
               </label>
               <textarea
-                rows={3}
+                rows={2}
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 placeholder="e.g. Flight BA 178, Terminal 4. Silent ride preferred."
                 className="w-full bg-[#1A1D28] text-[#F8FAFC] placeholder-[#64748B] border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-[#D4AF37] resize-none"
               />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium uppercase tracking-wider text-[#94A3B8] flex items-center justify-between">
+                <span>Secure Payment</span>
+                <span className="text-[10px] text-[#D4AF37]">Powered by Stripe</span>
+              </label>
+              <div className="w-full bg-[#1A1D28] border border-white/10 rounded-lg p-3 flex items-center justify-between opacity-70">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center">
+                    <div className="w-4 h-4 bg-white/20 rounded-full" />
+                    <div className="w-4 h-4 bg-white/20 rounded-full -ml-2 mix-blend-screen" />
+                  </div>
+                  <span className="text-sm text-[#94A3B8] tracking-widest">•••• •••• •••• 4242</span>
+                </div>
+                <div className="text-xs text-[#94A3B8]">12/28</div>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-white/10">

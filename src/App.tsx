@@ -3,17 +3,17 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { RideProvider } from './context/RideContext';
 import { Navbar } from './components/layout/Navbar';
 import { BottomNav } from './components/layout/BottomNav';
-import { BookRidePage } from './pages/customer/BookRidePage';
-import { UpcomingRidePage } from './pages/customer/UpcomingRidePage';
-import { VehicleSelectPage } from './pages/customer/VehicleSelectPage';
-import { BookingReviewPage } from './pages/customer/BookingReviewPage';
-import { DispatchDashboardPage } from './pages/dashboard/DispatchDashboardPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { HelpPage } from './pages/support/HelpPage';
-import { LanguagePage } from './pages/preferences/LanguagePage';
+const BookRidePage = React.lazy(() => import('./pages/customer/BookRidePage').then(module => ({ default: module.BookRidePage })));
+const UpcomingRidePage = React.lazy(() => import('./pages/customer/UpcomingRidePage').then(module => ({ default: module.UpcomingRidePage })));
+const VehicleSelectPage = React.lazy(() => import('./pages/customer/VehicleSelectPage').then(module => ({ default: module.VehicleSelectPage })));
+const BookingReviewPage = React.lazy(() => import('./pages/customer/BookingReviewPage').then(module => ({ default: module.BookingReviewPage })));
+const DispatchDashboardPage = React.lazy(() => import('./pages/dashboard/DispatchDashboardPage').then(module => ({ default: module.DispatchDashboardPage })));
+const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage').then(module => ({ default: module.RegisterPage })));
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage').then(module => ({ default: module.LoginPage })));
+const HelpPage = React.lazy(() => import('./pages/support/HelpPage').then(module => ({ default: module.HelpPage })));
+const LanguagePage = React.lazy(() => import('./pages/preferences/LanguagePage').then(module => ({ default: module.LanguagePage })));
+const AdminRolesPage = React.lazy(() => import('./pages/admin/AdminRolesPage').then(module => ({ default: module.AdminRolesPage })));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { AdminRolesPage } from './pages/admin/AdminRolesPage';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -23,13 +23,14 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen text-[#F8FAFC] flex flex-col font-sans selection:bg-[#D4AF37] selection:text-[#0A0B0E] relative pb-16">
       {/* Background Starry sky overlay that pulses on the dispatch page */}
       <div
-        className={`fixed inset-0 pointer-events-none -z-20 bg-[url('./assets/starry-bg.png')] bg-[length:500px] bg-repeat bg-center bg-fixed transition-all ${isDispatch ? 'animate-bg-pulse-seconds' : ''
+        className={`fixed inset-0 pointer-events-none -z-20 bg-[url('./assets/starry-bg.webp')] bg-[length:500px] bg-repeat bg-center bg-fixed transition-all ${isDispatch ? 'animate-bg-pulse-seconds' : ''
           }`}
       />
 
       <Navbar />
       <main className="flex-1 z-10">
-        <Routes>
+        <React.Suspense fallback={<div className="flex-1 flex items-center justify-center pt-20"><div className="animate-pulse-ring w-16 h-16 rounded-full border-2 border-[#D4AF37]"></div></div>}>
+          <Routes>
           {/* Customer Experience Surface — Unified Booking Flow */}
           <Route path="/" element={<BookRidePage />} />
           <Route path="/trip-details" element={<UpcomingRidePage />} />
@@ -63,6 +64,7 @@ const AppContent: React.FC = () => {
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </React.Suspense>
       </main>
       <BottomNav />
     </div>

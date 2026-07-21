@@ -19,7 +19,7 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 bg-[#0A0B0E] pt-4 pb-2">
       <div className={isDashboard ? "container-custom flex items-center justify-between" : "max-w-md mx-auto px-4 flex items-center justify-between relative"}>
         {/* Brand Logo — NOIR(gold)RIDE(white) */}
-        <Link to="/" className="flex items-center">
+        <Link to="/" onClick={() => window.dispatchEvent(new Event('resetBookingStep'))} className="flex items-center">
           <span className="font-serif text-[24px] font-bold tracking-tight leading-none flex items-center">
             <span className="text-[#D4AF37]">NOIR</span>
             <span className="text-[#F8FAFC]">RIDE</span>

@@ -20,10 +20,10 @@ export const VehicleCard: React.FC<VehicleCardProps> = ({
   return (
     <div
       onClick={onSelect}
-      className={`relative flex flex-col md:flex-row items-center justify-between p-5 md:p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${
+      className={`relative flex flex-col md:flex-row items-center justify-between p-5 md:p-6 rounded-2xl border transition-all duration-300 cursor-pointer backdrop-blur-md ${
         selected
-          ? 'bg-[#1A1D28] border-[#D4AF37] shadow-xl shadow-[#D4AF37]/10 translate-y-[-2px]'
-          : 'bg-[#12141C] border-white/10 hover:border-white/25 hover:bg-[#151822]'
+          ? 'bg-[#1A1D28]/80 border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)] translate-y-[-2px]'
+          : 'bg-[#12141C]/60 border-white/10 hover:border-white/30 hover:bg-[#151822]/80 hover:shadow-lg'
       }`}
     >
       {selected && (

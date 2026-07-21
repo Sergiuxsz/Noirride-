@@ -1,4 +1,4 @@
-export type ServiceType = 'airport' | 'hourly' | 'intercity';
+export type ServiceType = 'airport' | 'hourly' | 'intercity' | 'private-chauffeur';
 
 export type RideStatus = 'SCHEDULED' | 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -29,6 +29,9 @@ export interface Driver {
   languages: string[];
   vehicleMake: string;
   licensePlate: string;
+  status?: 'AVAILABLE' | 'BUSY';
+  availableIn?: number; // minutes until available, if BUSY
+  tagline?: string;
 }
 
 export interface Ride {
@@ -51,16 +54,23 @@ export interface Ride {
   price: number;
   notes?: string;
   createdAt: string;
+  routePolyline?: { lat: number; lng: number }[];
+  currentEta?: number;
 }
 
 export interface BookingFormState {
   pickupLocation: string;
+  pickupCoordinates?: { lat: number; lng: number };
   destination: string;
+  destinationCoordinates?: { lat: number; lng: number };
+  distanceMeters?: number;
+  durationSeconds?: number;
   date: string;
   time: string;
   passengers: number;
   serviceType: ServiceType;
   selectedVehicleId?: string;
+  selectedDriverId?: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
