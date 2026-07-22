@@ -4,6 +4,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import type { RideStatus } from '../../types';
 import type { SortField, SortOrder } from '../../hooks/useRideFilters';
+import { useTranslation } from 'react-i18next';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -24,18 +25,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   sortOrder,
   onToggleSort,
 }) => {
+  const { t } = useTranslation();
+  
   const statusOptions: { value: RideStatus | 'ALL'; label: string }[] = [
-    { value: 'ALL', label: 'All Operations' },
-    { value: 'SCHEDULED', label: 'Scheduled' },
-    { value: 'EN_ROUTE', label: 'En Route' },
-    { value: 'ARRIVED', label: 'Arrived' },
-    { value: 'IN_PROGRESS', label: 'In Progress' },
-    { value: 'COMPLETED', label: 'Completed' },
-    { value: 'CANCELLED', label: 'Cancelled' },
+    { value: 'ALL', label: t('dispatch.status.all', 'All Operations') },
+    { value: 'SCHEDULED', label: t('dispatch.status.scheduled', 'Scheduled') },
+    { value: 'EN_ROUTE', label: t('dispatch.status.enRoute', 'En Route') },
+    { value: 'ARRIVED', label: t('dispatch.status.arrived', 'Arrived') },
+    { value: 'IN_PROGRESS', label: t('dispatch.status.inProgress', 'In Progress') },
+    { value: 'COMPLETED', label: t('dispatch.status.completed', 'Completed') },
+    { value: 'CANCELLED', label: t('dispatch.status.cancelled', 'Cancelled') },
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-[#12141C] border border-white/10">
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-secondary border border-border">
       {/* Status Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
         {statusOptions.map((opt) => {
@@ -45,8 +48,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               key={opt.value}
               onClick={() => onStatusFilterChange(opt.value)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 ${isActive
-                  ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md shadow-[#D4AF37]/10'
-                  : 'bg-white/5 text-[#94A3B8] hover:bg-white/10 hover:text-[#F8FAFC]'
+                  ? 'bg-gold-500 text-black shadow-md shadow-gold-500/10'
+                  : 'bg-black/5 dark:bg-white/5 text-muted hover:bg-black/10 dark:hover:bg-white/10 hover:text-content'
                 }`}
             >
               {opt.label}
@@ -59,7 +62,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex items-center gap-3">
         <div className="w-full sm:w-64">
           <Input
-            placeholder="Search passenger, driver, ID..."
+            placeholder={t('dispatch.searchPlaceholder', 'Search passenger, driver, ID...')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             leftIcon={<Search size={16} />}
@@ -74,7 +77,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={() => onToggleSort('time')}
             leftIcon={<ArrowUpDown size={14} />}
           >
-            Time ({sortField === 'time' ? sortOrder.toUpperCase() : 'DESC'})
+            {t('dispatch.time', 'Time')} ({sortField === 'time' ? sortOrder.toUpperCase() : 'DESC'})
           </Button>
 
           <Button
@@ -83,7 +86,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={() => onToggleSort('price')}
             leftIcon={<ArrowUpDown size={14} />}
           >
-            Fare ({sortField === 'price' ? sortOrder.toUpperCase() : 'DESC'})
+            {t('dispatch.fare', 'Fare')} ({sortField === 'price' ? sortOrder.toUpperCase() : 'DESC'})
           </Button>
         </div>
       </div>

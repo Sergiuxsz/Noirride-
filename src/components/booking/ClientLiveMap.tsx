@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { useGoogleMapsScript } from '../../hooks/useGoogleMapsScript';
 import { getVehicleMarkerSVG } from '../map/VehicleMarkerIcons';
 import { getDriverColor } from '../dashboard/FleetLiveMap';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   rideId: string;
@@ -22,6 +23,7 @@ export const ClientLiveMap: React.FC<Props> = ({
   destination,
   onTelemetryUpdate
 }) => {
+  const { t } = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const { isLoaded, error } = useGoogleMapsScript();
@@ -100,8 +102,10 @@ export const ClientLiveMap: React.FC<Props> = ({
       const driverId = rideData.driverId;
       activeDriverId.current = driverId;
 
+      const currentEtaValue = rideData.currentEta ?? rideData.etaSeconds ?? rideData.pickupEtaSeconds ?? 300;
+
       if (onTelemetryUpdate) {
-        onTelemetryUpdate(rideData.status, rideData.currentEta || rideData.etaSeconds);
+        onTelemetryUpdate(rideData.status, currentEtaValue);
       }
 
       // Update telemetry geometry from ride
@@ -111,7 +115,7 @@ export const ClientLiveMap: React.FC<Props> = ({
         lng: prev?.lng || rideData.pickup?.lng,
         rawGeometry: rideData.routePolyline,
         status: rideData.status,
-        currentEta: rideData.currentEta || rideData.etaSeconds
+        currentEta: currentEtaValue
       }));
 
       // Listen to assigned driver for fallback (every 5s) if WS fails
@@ -358,23 +362,23 @@ export const ClientLiveMap: React.FC<Props> = ({
   }, []);
 
   if (error) {
-    return <div className="w-full h-[320px] bg-[#12141C] flex items-center justify-center text-red-400 text-sm border border-white/10 rounded-xl">Error loading map</div>;
+    return <div className="w-full h-[320px] bg-secondary flex items-center justify-center text-red-400 text-sm border border-border rounded-xl">{t('trip.errorLoadingMap', 'Error loading map')}</div>;
   }
 
   return (
-    <div className="relative w-full h-[320px] rounded-xl overflow-hidden border border-white/10 mt-6 shadow-lg block">
+    <div className="relative w-full h-[320px] rounded-xl overflow-hidden border border-border mt-6 shadow-lg block">
       <div ref={mapRef} className="absolute inset-0 w-full h-full block" />
       
       {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#12141C]/80 backdrop-blur-sm z-0">
-          <div className="w-6 h-6 border-2 border-[#FFD700] border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/80 backdrop-blur-sm z-0">
+          <div className="w-6 h-6 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      <div className="absolute top-4 right-4 bg-[#12141C]/90 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 backdrop-blur-sm z-10 shadow-xl">
+      <div className="absolute top-4 right-4 bg-secondary/90 border border-border px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 backdrop-blur-sm z-10 shadow-xl">
         <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-        <span className="text-[#F8FAFC]">
-          {isConnected ? 'Telemetry Active (Live GPS)' : 'Connecting...'}
+        <span className="text-content">
+          {isConnected ? t('trip.telemetryActive', 'Telemetry Active (Live GPS)') : t('trip.connecting', 'Connecting...')}
         </span>
       </div>
     </div>

@@ -49,6 +49,12 @@ FleetManager.initialize().then(() => {
             status: data.status,
             notes: data.notes
           }));
+        } else if (change.type === 'added') {
+          const data = change.doc.data();
+          fleetWs.broadcast(JSON.stringify({
+            type: 'RIDE_ADDED',
+            ride: { id: change.doc.id, ...data }
+          }));
         }
       });
     });
@@ -60,8 +66,19 @@ FleetManager.initialize().then(() => {
 app.post('/api/dispatch', dispatchBooking);
 app.post('/api/rides/calculate-price', calculatePriceHandler);
 
-app.get('/api/rides/active', (req, res) => {
-  res.json([]);
+app.get('/api/rides/active', async (req, res) => {
+  try {
+    const db = getFirestore('noirride');
+    const ridesSnapshot = await db.collection('rides').where('status', 'in', ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS']).get();
+    const activeRides: any[] = [];
+    ridesSnapshot.forEach(doc => {
+      activeRides.push({ id: doc.id, ...doc.data() });
+    });
+    res.json(activeRides);
+  } catch (err) {
+    console.error('[RealtimeServer] Error fetching active rides:', err);
+    res.status(500).json({ error: 'Failed to fetch active rides' });
+  }
 });
 
 app.get('/api/rides/:id', (req, res) => {

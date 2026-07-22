@@ -3,11 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Car, Activity, User, Sparkles } from 'lucide-react';
 import telemetryImg from '../../assets/live_telemetry.webp';
 import { useRideContext } from '../../context/RideContext';
+import { useTranslation } from 'react-i18next';
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { confirmedRide } = useRideContext();
+  const { t } = useTranslation();
   const isDispatch = location.pathname.startsWith('/dispatch');
 
   // Hide bottom nav on dispatch operator dashboard for clean workspace separation
@@ -18,7 +20,7 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     {
       id: 'home',
-      label: 'HOME',
+      label: t('nav.home', 'HOME'),
       icon: <Home size={22} />,
       active: currentPath === '/' && !window.location.hash,
       onClick: () => {
@@ -32,7 +34,7 @@ export const BottomNav: React.FC = () => {
     },
     {
       id: 'fleet',
-      label: 'FLEET',
+      label: t('nav.fleet', 'FLEET'),
       icon: <Car size={22} />,
       active: currentPath === '/fleet',
       onClick: () => {
@@ -41,7 +43,7 @@ export const BottomNav: React.FC = () => {
     },
     {
       id: 'activity',
-      label: 'ACTIVITY',
+      label: t('nav.activity', 'ACTIVITY'),
       icon: <Activity size={22} />,
       active: currentPath === '/trip-details',
       onClick: () => {
@@ -50,11 +52,11 @@ export const BottomNav: React.FC = () => {
     },
     {
       id: 'account',
-      label: 'ACCOUNT',
+      label: t('nav.account', 'ACCOUNT'),
       icon: <User size={22} />,
       active: window.location.hash === '#account',
       onClick: () => {
-        alert('Executive Account Dossier: VIP Gold Member (Verified 5G Protocol)');
+        alert(t('nav.accountDossier', 'Executive Account Dossier: VIP Gold Member (Verified 5G Protocol)'));
       },
     },
   ];
@@ -75,14 +77,14 @@ export const BottomNav: React.FC = () => {
               <div className="min-w-0 flex-1 flex flex-col justify-center">
                 <div className="flex items-center gap-1.5">
                   <span className="font-sans text-xs font-black tracking-wider uppercase text-black">
-                    ACTIVE BOOKING
+                    {t('nav.activeBooking', 'ACTIVE BOOKING')}
                   </span>
                   <span className="font-sans text-[10px] font-bold tracking-wide uppercase text-black/80 flex items-center">
-                    • {confirmedRide.status ? confirmedRide.status.replace('_', ' ') : 'EN ROUTE'}
+                    • {confirmedRide.status ? confirmedRide.status.replace('_', ' ') : t('nav.enRoute', 'EN ROUTE')}
                   </span>
                 </div>
                 <p className="font-sans text-[11px] font-bold text-black uppercase tracking-tight truncate leading-tight">
-                  {confirmedRide.driverName || 'Chauffeur'} • {confirmedRide.vehicleName || 'Vehicle'}
+                  {confirmedRide.driverName || t('nav.chauffeurFallback', 'Chauffeur')} • {confirmedRide.vehicleName || t('nav.vehicleFallback', 'Vehicle')}
                 </p>
               </div>
             </div>
@@ -93,7 +95,7 @@ export const BottomNav: React.FC = () => {
         </div>
       )}
 
-      <nav className="w-full bg-[#0A0B0E] border-t border-white/10 pt-2.5 pb-3 px-4 flex justify-center shadow-2xl pointer-events-auto">
+      <nav className="w-full bg-primary border-t border-border pt-2.5 pb-3 px-4 flex justify-center shadow-2xl pointer-events-auto transition-colors">
         <div className="w-full max-w-md grid grid-cols-4 gap-1 items-center">
           {navItems.map((item) => (
             <button
@@ -102,8 +104,8 @@ export const BottomNav: React.FC = () => {
               onClick={item.onClick}
               className={`col-span-1 w-full flex flex-col items-center justify-center gap-1.5 py-1 px-1 transition-all select-none ${
                 item.active
-                  ? 'text-[#D4AF37] font-bold'
-                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                  ? 'text-gold-500 font-bold'
+                  : 'text-muted hover:text-content'
               }`}
             >
               <div className={`transition-transform ${item.active ? 'scale-110' : ''}`}>

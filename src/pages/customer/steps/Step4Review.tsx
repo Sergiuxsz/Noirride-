@@ -3,6 +3,7 @@ import { ArrowLeft, Lock, User, Mail, Phone } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { PriceSummary } from '../../../components/booking/PriceSummary';
+import { useTranslation } from 'react-i18next';
 import type { BookingFormState, Vehicle } from '../../../types';
 
 interface Step4ReviewProps {
@@ -43,36 +44,38 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
   handleStep4Confirm,
   goBack,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="container-custom max-w-4xl pt-4 animate-fade-in">
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 text-xs text-[#94A3B8] hover:text-[#D4AF37] mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-gold-500 mb-6 transition-colors"
       >
-        <ArrowLeft size={14} /> Back to Fleet Selection
+        <ArrowLeft size={14} /> {t('booking.backToFleet', 'Back to Fleet Selection')}
       </button>
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#F8FAFC]">Review & Finalize</h2>
-          <p className="text-sm text-[#94A3B8] mt-1">Confirm your details and lock in the reservation.</p>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-content">{t('booking.reviewBooking', 'Review & Finalize')}</h2>
+          <p className="text-sm text-muted mt-1">{t('booking.confirm_details', 'Confirm your details and lock in the reservation.')}</p>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#94A3B8] bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
-          <Lock size={14} className="text-[#D4AF37]" /> Encrypted
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted bg-white/5 px-3 py-1.5 rounded-xl border border-border">
+          <Lock size={14} className="text-gold-500" /> {t('booking.encrypted', 'Encrypted')}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Credentials Form */}
         <div className="lg:col-span-7">
-          <form onSubmit={handleStep4Confirm} className="p-6 rounded-2xl bg-[#12141C] border border-white/10 flex flex-col gap-5">
-            <h3 className="font-serif text-lg font-bold text-[#F8FAFC] border-b border-white/10 pb-3">
-              Passenger Credentials
+          <form onSubmit={handleStep4Confirm} className="p-6 rounded-2xl bg-secondary border border-border flex flex-col gap-5">
+            <h3 className="font-serif text-lg font-bold text-content border-b border-border pb-3">
+              {t('booking.passengerCredentials', 'Passenger Credentials')}
             </h3>
 
             <Input
-              label="Full Name"
+              label={t('booking.fullName', 'Full Name')}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               error={errors.name}
@@ -81,7 +84,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Email"
+                label={t('booking.email', 'Email')}
                 type="email"
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
@@ -89,7 +92,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                 leftIcon={<Mail size={16} />}
               />
               <Input
-                label="Phone"
+                label={t('booking.phone', 'Phone')}
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 error={errors.phone}
@@ -98,44 +101,44 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                Special Requests / Flight Code
+              <label className="text-xs font-medium uppercase tracking-wider text-muted">
+                {t('booking.specialRequests', 'Special Requests / Flight Code')}
               </label>
               <textarea
                 rows={2}
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
-                placeholder="e.g. Flight BA 178, Terminal 4. Silent ride preferred."
-                className="w-full bg-[#1A1D28] text-[#F8FAFC] placeholder-[#64748B] border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-[#D4AF37] resize-none"
+                placeholder={t('booking.specialRequestsPlaceholder', 'e.g. Flight BA 178, Terminal 4. Silent ride preferred.')}
+                className="w-full bg-tertiary text-content placeholder-muted border border-border rounded-lg p-3 text-sm focus:outline-none focus:border-gold-500 resize-none"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium uppercase tracking-wider text-[#94A3B8] flex items-center justify-between">
-                <span>Secure Payment</span>
-                <span className="text-[10px] text-[#D4AF37]">Powered by Stripe</span>
+              <label className="text-xs font-medium uppercase tracking-wider text-muted flex items-center justify-between">
+                <span>{t('booking.securePayment', 'Secure Payment')}</span>
+                <span className="text-[10px] text-gold-500">{t('booking.poweredByStripe', 'Powered by Stripe')}</span>
               </label>
-              <div className="w-full bg-[#1A1D28] border border-white/10 rounded-lg p-3 flex items-center justify-between opacity-70">
+              <div className="w-full bg-tertiary border border-border rounded-lg p-3 flex items-center justify-between opacity-70">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center">
                     <div className="w-4 h-4 bg-white/20 rounded-full" />
                     <div className="w-4 h-4 bg-white/20 rounded-full -ml-2 mix-blend-screen" />
                   </div>
-                  <span className="text-sm text-[#94A3B8] tracking-widest">•••• •••• •••• 4242</span>
+                  <span className="text-sm text-muted tracking-widest">•••• •••• •••• 4242</span>
                 </div>
-                <div className="text-xs text-[#94A3B8]">12/28</div>
+                <div className="text-xs text-muted">12/28</div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-border">
               <Button type="submit" size="lg" className="w-full" leftIcon={<Lock size={16} />}>
-                Confirm Executive Transfer (${priceBreakdown.total})
+                {t('booking.confirm', 'Confirm Executive Transfer')} (${priceBreakdown.total})
               </Button>
             </div>
           </form>
 
-          <div className="mt-4 p-4 rounded-xl bg-[#1A1D28]/40 border border-white/5 text-xs text-[#94A3B8] leading-relaxed">
-            By confirming, you authorize NoirRide to lock the scheduled chauffeur dispatch. Free cancellation up to 2 hours prior.
+          <div className="mt-4 p-4 rounded-xl bg-tertiary/40 border border-white/5 text-xs text-muted leading-relaxed">
+            {t('booking.disclaimer', 'By confirming, you authorize NoirRide to lock the scheduled chauffeur dispatch. Free cancellation up to 2 hours prior.')}
           </div>
         </div>
 

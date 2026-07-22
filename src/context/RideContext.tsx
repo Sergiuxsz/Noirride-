@@ -305,32 +305,18 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setRides((prev) => {
             const newRides = [...prev];
             activeRides.forEach((activeRide: any) => {
-              const existingIdx = newRides.findIndex(r => r.id === activeRide.rideId);
+              const rideId = activeRide.id || activeRide.rideId;
+              const existingIdx = newRides.findIndex(r => r.id === rideId);
               if (existingIdx >= 0) {
                 newRides[existingIdx] = {
                   ...newRides[existingIdx],
-                  status: activeRide.status,
+                  ...activeRide,
+                  id: rideId
                 };
               } else {
                 newRides.push({
-                  id: activeRide.rideId,
-                  customerName: 'VIP Client (Active Telemetry)',
-                  customerEmail: '',
-                  customerPhone: '',
-                  vipTier: 'Black Card',
-                  pickupLocation: 'Telemetry Checkpoint',
-                  destination: 'Telemetry Destination',
-                  date: new Date().toISOString().split('T')[0],
-                  time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-                  passengers: 1,
-                  serviceType: 'private-chauffeur',
-                  vehicleId: 'veh-1',
-                  vehicleName: 'VIP Unit',
-                  driverId: activeRide.driverId,
-                  driverName: DEFAULT_DRIVERS.find(d => d.id === activeRide.driverId)?.name || activeRide.driverId,
-                  status: activeRide.status,
-                  price: 0,
-                  createdAt: new Date().toISOString(),
+                  ...activeRide,
+                  id: rideId
                 });
               }
             });
@@ -384,6 +370,16 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return newRides;
             });
             setConfirmedRide((prev) => (prev && prev.id === parsed.rideId ? { ...prev, status: parsed.status } : prev));
+          } 
+          else if (parsed.type === 'RIDE_ADDED') {
+            setRides((prev) => {
+              const newRides = [...prev];
+              const existingIdx = newRides.findIndex(r => r.id === parsed.ride.id);
+              if (existingIdx === -1) {
+                newRides.unshift(parsed.ride);
+              }
+              return newRides;
+            });
           } 
           else if (parsed.type === 'RIDE_COMPLETED') {
             setRides((prev) => {

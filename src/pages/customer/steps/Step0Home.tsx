@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, CheckCircle, Clock, MapPin, Loader2, Home, Briefcase, History } from 'lucide-react';
 import type { ServiceType } from '../../../types';
 import { usePlacesAutocomplete, SavedLocation } from '../../../hooks/usePlacesAutocomplete';
+import { useTranslation } from 'react-i18next';
 
 import airportImg from '../../../assets/airport_transfer.png';
 import hourlyImg from '../../../assets/hourly_chauffeur.png';
@@ -33,6 +34,7 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const autocompleteRef = React.useRef<HTMLFormElement>(null);
+  const { t } = useTranslation();
 
   const {
     input,
@@ -141,22 +143,22 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
   return (
     <div className="max-w-md mx-auto px-4 pt-0 pb-44 space-y-4 animate-fade-in relative">
       {/* Sticky Header Area containing Search Bar and Golden Line Separation */}
-      <div className="sticky top-[48px] z-30 bg-[#0A0B0E] pt-2 pb-1 -mx-4 px-4">
+      <div className="sticky top-[48px] z-30 bg-primary pt-2 pb-1 -mx-4 px-4 transition-colors">
         {/* Search Bar */}
         <form onSubmit={handleSearchSubmit} className="relative" ref={autocompleteRef}>
-          <div className="flex items-center bg-[#181A20]/90 border border-white/10 rounded-full py-2.5 px-4 backdrop-blur-md shadow-xl">
-            <Search size={18} className="text-[#8E9BAE] mr-3 flex-shrink-0" />
+          <div className="flex items-center bg-primary/90 border border-border rounded-full py-2.5 px-4 backdrop-blur-md shadow-xl">
+            <Search size={18} className="text-muted mr-3 flex-shrink-0" />
             <input
               type="text"
               value={input}
               onChange={handleInputChange}
               onFocus={() => setIsAutocompleteOpen(true)}
-              placeholder="Where to?"
-              className="flex-1 bg-transparent text-sm sm:text-base text-[#F8FAFC] placeholder-[#8E9BAE] font-sans focus:outline-none"
+              placeholder={t('home.whereTo', 'Where to?')}
+              className="flex-1 bg-transparent text-sm sm:text-base text-content placeholder-muted font-sans focus:outline-none"
               autoComplete="off"
             />
             {loading && (
-              <div className="mr-3 animate-spin text-[#D4AF37]">
+              <div className="mr-3 animate-spin text-gold-500">
                 <Loader2 size={16} />
               </div>
             )}
@@ -165,33 +167,33 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
               <button
                 type="button"
                 onClick={() => setIsTimeDropdownOpen(!isTimeDropdownOpen)}
-                className="flex items-center gap-1.5 pl-1 text-sm font-semibold text-[#D4AF37] hover:text-[#E5C158] transition-colors"
+                className="flex items-center gap-1.5 pl-1 text-sm font-semibold text-gold-500 hover:text-[#E5C158] transition-colors"
               >
                 <span>
                   {pickupTimeOption === 'now'
-                    ? 'Now'
+                    ? t('booking.now', 'Now')
                     : pickupTimeOption === '15min'
-                      ? '15m'
+                      ? t('booking.15m', '15m')
                       : pickupTimeOption === '30min'
-                        ? '30m'
+                        ? t('booking.30m', '30m')
                         : pickupTimeOption === '1hour'
-                          ? '1h'
-                          : 'Later'}
+                          ? t('booking.1h', '1h')
+                          : t('booking.later', 'Later')}
                 </span>
-                <ChevronDown size={14} className="text-[#D4AF37]" />
+                <ChevronDown size={14} className="text-gold-500" />
               </button>
             </div>
           </div>
 
           {/* Time Selection Dropdown Options */}
           {isTimeDropdownOpen && (
-            <div className="absolute right-0 top-14 z-50 w-52 bg-[#12141C] border border-[#D4AF37]/40 rounded-2xl shadow-2xl p-2 animate-fade-in flex flex-col gap-1">
+            <div className="absolute right-0 top-14 z-50 w-52 bg-secondary border border-gold-500/40 rounded-2xl shadow-2xl p-2 animate-fade-in flex flex-col gap-1">
               {[
-                { id: 'now', label: 'Now (Immediate)' },
-                { id: '15min', label: 'In 15 Minutes' },
-                { id: '30min', label: 'In 30 Minutes' },
-                { id: '1hour', label: 'In 1 Hour' },
-                { id: 'later', label: 'Schedule Custom' },
+                { id: 'now', label: t('booking.nowImmediate', 'Now (Immediate)') },
+                { id: '15min', label: t('booking.in15Min', 'In 15 Minutes') },
+                { id: '30min', label: t('booking.in30Min', 'In 30 Minutes') },
+                { id: '1hour', label: t('booking.in1Hour', 'In 1 Hour') },
+                { id: 'later', label: t('booking.scheduleCustom', 'Schedule Custom') },
               ].map((opt) => (
                 <button
                   key={opt.id}
@@ -202,8 +204,8 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
                     setIsTimeDropdownOpen(false);
                   }}
                   className={`text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-between ${pickupTimeOption === opt.id
-                    ? 'bg-[#D4AF37] text-[#0A0B0E]'
-                    : 'text-[#E2E8F0] hover:bg-white/10'
+                    ? 'bg-gold-500 text-black'
+                    : 'text-content hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                 >
                   <span>{opt.label}</span>
@@ -215,7 +217,7 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
 
           {/* Autocomplete Dropdown */}
           {isAutocompleteOpen && ((input && predictions.length > 0) || (input && !loading && predictions.length === 0) || ((!input || input.length < 2) && recentSearches.length > 0)) && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D28] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-tertiary border border-border rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in max-h-80 overflow-y-auto">
               {/* Active Search Predictions */}
               {input && predictions.length > 0 && (
                 <div className="p-2">
@@ -224,13 +226,13 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
                       key={prediction.placeId}
                       type="button"
                       onClick={() => handleSelectPlace(prediction.placeId, prediction.description)}
-                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg transition-colors flex items-start gap-3 group"
+                      className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors flex items-start gap-3 group"
                     >
-                      <MapPin size={18} className="text-[#94A3B8] group-hover:text-[#D4AF37] mt-0.5 shrink-0 transition-colors" />
+                      <MapPin size={18} className="text-muted group-hover:text-gold-500 mt-0.5 shrink-0 transition-colors" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-[#F8FAFC] truncate">{prediction.mainText}</p>
+                        <p className="text-sm text-content truncate">{prediction.mainText}</p>
                         {prediction.secondaryText && (
-                          <p className="text-xs text-[#64748B] truncate">{prediction.secondaryText}</p>
+                          <p className="text-xs text-muted truncate">{prediction.secondaryText}</p>
                         )}
                       </div>
                     </button>
@@ -240,8 +242,8 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
 
               {/* No results state */}
               {input && !loading && predictions.length === 0 && (
-                <div className="p-6 text-center text-sm text-[#64748B]">
-                  No places found for "{input}"
+                <div className="p-6 text-center text-sm text-muted">
+                  {t('booking.noPlaces', 'No places found for')} "{input}"
                 </div>
               )}
 
@@ -252,21 +254,21 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
                   {recentSearches.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between px-4 py-2">
-                        <h4 className="text-[10px] uppercase tracking-widest text-[#64748B] font-semibold">Recent</h4>
-                        <button type="button" onClick={clearRecentSearches} className="text-[10px] text-[#D4AF37] hover:text-[#F8FAFC] transition-colors">Clear</button>
+                        <h4 className="text-[10px] uppercase tracking-widest text-muted font-semibold">{t('booking.recent', 'Recent')}</h4>
+                        <button type="button" onClick={clearRecentSearches} className="text-[10px] text-gold-500 hover:text-content transition-colors">{t('booking.clear', 'Clear')}</button>
                       </div>
                       {recentSearches.map((recent) => (
                         <button
                           key={recent.id}
                           type="button"
                           onClick={() => handleSelectSaved(recent)}
-                          className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-3 group"
+                          className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors flex items-center gap-3 group"
                         >
                           <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                            <History size={14} className="text-[#94A3B8]" />
+                            <History size={14} className="text-muted" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[#F8FAFC] truncate">{recent.label}</p>
+                            <p className="text-sm text-content truncate">{recent.label}</p>
                           </div>
                         </button>
                       ))}
@@ -277,7 +279,7 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
             </div>
           )}
         </form>
-        <div className="w-full h-[1px] bg-[#D4AF37]/60 mt-3.5 mb-1" />
+        <div className="w-full h-[1px] bg-gold-500/60 mt-3.5 mb-1" />
       </div>
 
       {/* Tab Row */}
@@ -286,11 +288,11 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('rides')}
-            className={`flex flex-col items-center justify-center font-sans text-xs sm:text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'rides' ? 'text-[#D4AF37]' : 'text-[#64748B] hover:text-[#F8FAFC]'
+            className={`flex flex-col items-center justify-center font-sans text-xs sm:text-sm font-bold tracking-widest uppercase transition-all ${activeTab === 'rides' ? 'text-gold-500' : 'text-muted hover:text-content'
               }`}
           >
-            <span className="pb-2">CHAUFFEUR SERVICE</span>
-            <div className={`w-full h-0.5 ${activeTab === 'rides' ? 'bg-[#D4AF37]' : 'bg-transparent'}`} />
+            <span className="pb-2">{t('home.chauffeurService', 'CHAUFFEUR SERVICE')}</span>
+            <div className={`w-full h-0.5 ${activeTab === 'rides' ? 'bg-gold-500' : 'bg-transparent'}`} />
           </button>
           <button
             type="button"
@@ -298,20 +300,20 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
               setActiveTab('dispatch');
               navigate('/dispatch');
             }}
-            className="flex flex-col items-center justify-center font-sans text-xs sm:text-sm font-bold tracking-widest uppercase transition-all text-[#64748B] hover:text-[#F8FAFC]"
+            className="flex flex-col items-center justify-center font-sans text-xs sm:text-sm font-bold tracking-widest uppercase transition-all text-muted hover:text-content"
           >
-            <span className="pb-2">DISPATCH</span>
+            <span className="pb-2">{t('home.dispatch', 'DISPATCH')}</span>
             <div className="w-full h-0.5 bg-transparent" />
           </button>
         </div>
-        <div className="w-full h-[1px] bg-white/10" />
+        <div className="w-full h-[1px] border-b border-border" />
       </div>
 
       {/* Recent/Saved Locations List */}
       <div className="space-y-3 pt-2">
         {[
-          { title: 'Mondrian Hotel', subtitle: 'Enter your location' },
-          { title: 'DFW Private Terminal', subtitle: 'Enter your location' },
+          { title: t('home.loc1', 'Mondrian Hotel'), subtitle: t('booking.enterLocation', 'Enter your location') },
+          { title: t('home.loc2', 'DFW Private Terminal'), subtitle: t('booking.enterLocation', 'Enter your location') },
         ].map((loc, idx) => (
           <div
             key={idx}
@@ -321,14 +323,14 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
             }}
             className="flex items-center gap-4 cursor-pointer group py-1.5"
           >
-            <div className="text-[#D4AF37] group-hover:scale-110 transition-transform flex-shrink-0">
+            <div className="text-gold-500 group-hover:scale-110 transition-transform flex-shrink-0">
               <Clock size={20} />
             </div>
             <div className="flex flex-col">
-              <span className="font-sans text-[15px] font-bold text-[#F8FAFC] group-hover:text-[#D4AF37] transition-colors leading-snug">
+              <span className="font-sans text-[15px] font-bold text-content group-hover:text-gold-500 transition-colors leading-snug">
                 {loc.title}
               </span>
-              <span className="font-sans text-[13px] text-[#64748B] font-medium leading-tight">
+              <span className="font-sans text-[13px] text-muted font-medium leading-tight">
                 {loc.subtitle}
               </span>
             </div>
@@ -338,55 +340,55 @@ export const Step0Home: React.FC<Step0HomeProps> = ({
 
       {/* Suggestions Section */}
       <div className="pt-3 space-y-3">
-        <h2 className="font-sans text-[11px] font-bold uppercase tracking-[0.18em] text-[#8E9BAE]">
-          SUGGESTIONS
+        <h2 className="font-sans text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+          {t('home.suggestions', 'SUGGESTIONS')}
         </h2>
-        <div className="max-h-[230px] overflow-y-auto pr-1.5 grid grid-cols-1 gap-3.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-thumb]:bg-[#D4AF37]/40 hover:[&::-webkit-scrollbar-thumb]:bg-[#D4AF37] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="max-h-[230px] overflow-y-auto pr-1.5 grid grid-cols-1 gap-3.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-tertiary [&::-webkit-scrollbar-thumb]:bg-gold-500/40 hover:[&::-webkit-scrollbar-thumb]:bg-gold-500 [&::-webkit-scrollbar-thumb]:rounded-full">
           {/* Card 1: Airport transfer */}
           <div
             onClick={handleAirportClick}
-            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
+            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-border hover:border-gold-500/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={airportImg} alt="Airplane hangar" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Airport Transfer
+            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-white">
+              {t('home.airportTransfer', 'Airport Transfer')}
             </span>
           </div>
 
           {/* Card 2: Private chauffeur */}
           <div
             onClick={() => handleServiceCardClick('private-chauffeur')}
-            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
+            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-border hover:border-gold-500/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={hourlyImg} alt="Private chauffeur" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Private Chauffeur
+            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-white">
+              {t('home.privateChauffeur', 'Private Chauffeur')}
             </span>
           </div>
 
           {/* Card 3: Outside City (Intercity) */}
           <div
             onClick={() => handleServiceCardClick('intercity')}
-            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
+            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-border hover:border-gold-500/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={intercityImg} alt="Car on the bridge" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Outside City
+            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-content">
+              {t('home.outsideCity', 'Outside City')}
             </span>
           </div>
 
           {/* Card 4: Hourly Chauffeur */}
           <div
             onClick={handleHourlyClick}
-            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-white/10 hover:border-[#D4AF37]/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
+            className="group relative aspect-[21/9] rounded-2xl overflow-hidden border border-border hover:border-gold-500/60 cursor-pointer transition-all duration-300 shadow-lg flex flex-col justify-end p-3.5"
           >
             <img src={heroImg} alt="Chauffeur fleet" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-[#F8FAFC]">
-              Hourly Chauffeur
+            <span className="relative z-10 font-sans text-xs sm:text-sm font-bold text-content">
+              {t('home.hourlyChauffeur', 'Hourly Chauffeur')}
             </span>
           </div>
         </div>

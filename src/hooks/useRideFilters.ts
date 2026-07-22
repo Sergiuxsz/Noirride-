@@ -20,10 +20,10 @@ export const useRideFilters = () => {
         }
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
-          const matchCustomer = ride.customerName.toLowerCase().includes(q);
-          const matchDriver = ride.driverName.toLowerCase().includes(q);
-          const matchId = ride.id.toLowerCase().includes(q);
-          const matchPickup = ride.pickupLocation.toLowerCase().includes(q);
+          const matchCustomer = (ride.customerName || '').toLowerCase().includes(q);
+          const matchDriver = (ride.driverName || '').toLowerCase().includes(q);
+          const matchId = (ride.id || '').toLowerCase().includes(q);
+          const matchPickup = (ride.pickupLocation || '').toLowerCase().includes(q);
           return matchCustomer || matchDriver || matchId || matchPickup;
         }
         return true;
@@ -33,8 +33,8 @@ export const useRideFilters = () => {
           return sortOrder === 'asc' ? a.price - b.price : b.price - a.price;
         } else {
           // Sort by date + time
-          const timeA = new Date(`${a.date}T${a.time}`).getTime();
-          const timeB = new Date(`${b.date}T${b.time}`).getTime();
+          const timeA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`).getTime();
+          const timeB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`).getTime();
           return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
         }
       });
@@ -47,7 +47,7 @@ export const useRideFilters = () => {
     const cancelledRides = rides.filter((r) => r.status === 'CANCELLED').length;
     const revenueToday = rides
       .filter((r) => r.status === 'COMPLETED' || r.status === 'IN_PROGRESS' || r.status === 'EN_ROUTE')
-      .reduce((acc, curr) => acc + curr.price, 0);
+      .reduce((acc, curr) => acc + (curr.price || 0), 0);
 
     return {
       totalRidesToday,

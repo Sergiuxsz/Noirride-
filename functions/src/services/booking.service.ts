@@ -66,7 +66,7 @@ export class BookingService {
     // Automatically trigger the real-time server for dispatch and simulation
     try {
       const axios = require('axios');
-      const REALTIME_SERVER_URL = process.env.REALTIME_SERVER_URL || 'http://localhost:8080';
+      const REALTIME_SERVER_URL = process.env.REALTIME_SERVER_URL || 'http://127.0.0.1:8080';
       
       // Await the call so Firebase Functions doesn't freeze the container before the HTTP request leaves
       await axios.post(`${REALTIME_SERVER_URL}/api/dispatch`, {

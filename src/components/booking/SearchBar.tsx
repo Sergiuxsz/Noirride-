@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Clock, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SearchBarProps {
   value: string;
@@ -26,9 +27,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   error,
   icon,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="w-full space-y-3">
-      <div className="relative flex flex-col md:flex-row gap-3 p-2 bg-[#12141C]/80 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md">
+      <div className="relative flex flex-col md:flex-row gap-3 p-2 bg-secondary border border-border rounded-2xl shadow-xl">
         {/* Input container */}
         <div className="relative flex-1 flex items-center">
           {icon ? (
@@ -36,43 +38,43 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               {icon}
             </div>
           ) : (
-            <MapPin size={20} className="absolute left-4 text-[#D4AF37] pointer-events-none" />
+            <MapPin size={20} className="absolute left-4 text-gold-500 pointer-events-none" />
           )}
           <input
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full bg-[#1A1D28] border border-white/5 hover:border-white/15 focus:border-[#D4AF37] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#F8FAFC] placeholder-[#64748B] focus:outline-none transition-all"
+            placeholder={placeholder || t('booking.enterAddress', 'Enter address...')}
+            className="w-full bg-tertiary border border-border hover:border-border/50 focus:border-gold-500 rounded-xl pl-12 pr-4 py-3.5 text-sm text-content placeholder-muted focus:outline-none transition-all"
           />
         </div>
 
         {/* Time Select Segmented Control */}
         {showTimeSelect && onChangeTimeOption && (
-          <div className="flex items-center bg-[#1A1D28] border border-white/5 rounded-xl p-1 md:max-w-xs">
+          <div className="flex items-center bg-tertiary border border-border rounded-xl p-1 md:max-w-xs">
             <button
               type="button"
               onClick={() => onChangeTimeOption('now')}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                 timeOption === 'now'
-                  ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                  ? 'bg-gold-500 text-black shadow-md'
+                  : 'text-muted hover:text-content'
               }`}
             >
               <Clock size={14} />
-              <span>Now</span>
+              <span>{t('booking.now', 'Now')}</span>
             </button>
             <button
               type="button"
               onClick={() => onChangeTimeOption('later')}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
                 timeOption === 'later'
-                  ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                  ? 'bg-gold-500 text-black shadow-md'
+                  : 'text-muted hover:text-content'
               }`}
             >
               <Calendar size={14} />
-              <span>Later</span>
+              <span>{t('booking.later', 'Later')}</span>
             </button>
           </div>
         )}
@@ -81,9 +83,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <button
           type="submit"
           onClick={onSubmit}
-          className="bg-[#D4AF37] hover:bg-[#C5A030] text-[#0A0B0E] px-6 py-3.5 rounded-xl font-serif text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#D4AF37]/10"
+          className="bg-gold-500 hover:bg-[#C5A030] text-black px-6 py-3.5 rounded-xl font-serif text-sm font-bold uppercase tracking-widest transition-all shadow-lg shadow-gold-500/10"
         >
-          {buttonLabel}
+          {buttonLabel === 'Search' ? t('booking.search', 'Search') : buttonLabel}
         </button>
       </div>
 

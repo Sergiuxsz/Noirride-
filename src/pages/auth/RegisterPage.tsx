@@ -4,8 +4,10 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export const RegisterPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { register, loginWithOAuth } = useAuth();
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
@@ -24,23 +26,23 @@ export const RegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !contactValue || !password) {
-      setError('Please fill in all required registration credentials.');
+      setError(t('auth.fillCredentials', 'Please fill in all required registration credentials.'));
       return;
     }
     if (password.length < 6) {
-      setError('Security passphrase must be at least 6 characters.');
+      setError(t('auth.passphraseMin', 'Security passphrase must be at least 6 characters.'));
       return;
     }
     if (authMethod === 'email' && !contactValue.includes('@')) {
-      setError('Please enter a valid VIP email address.');
+      setError(t('auth.invalidEmail', 'Please enter a valid VIP email address.'));
       return;
     }
     if (authMethod === 'phone' && contactValue.replace(/\D/g, '').length < 5) {
-      setError('Please enter a valid phone number.');
+      setError(t('auth.invalidPhone', 'Please enter a valid phone number.'));
       return;
     }
     if (!agreedTerms) {
-      setError('You must accept the Executive Chauffeur Protocol terms.');
+      setError(t('auth.acceptTerms', 'You must accept the Executive Chauffeur Protocol terms.'));
       return;
     }
 
@@ -72,7 +74,7 @@ export const RegisterPage: React.FC = () => {
 
     const cleanCode = verificationCode.trim();
     if (cleanCode.length !== 6) {
-      setError('Verification code must be exactly 6 digits.');
+      setError(t('auth.codeLength', 'Verification code must be exactly 6 digits.'));
       setIsLoading(false);
       return;
     }
@@ -83,7 +85,7 @@ export const RegisterPage: React.FC = () => {
         await api.verifyProtocolCode(email, cleanCode);
       } catch (verifyErr: any) {
         if (cleanCode !== generatedCode && cleanCode !== '778899') {
-          setError(verifyErr.message || 'Invalid verification code. Please check your token and try again.');
+          setError(verifyErr.message || t('auth.invalidCode', 'Invalid verification code. Please check your token and try again.'));
           setIsLoading(false);
           return;
         }
@@ -98,7 +100,7 @@ export const RegisterPage: React.FC = () => {
           phone,
         });
       } catch (regErr: any) {
-        setError(regErr.message || 'Failed to complete registration.');
+        setError(regErr.message || t('auth.regFailed', 'Failed to complete registration.'));
         setIsLoading(false);
         return;
       }
@@ -122,7 +124,7 @@ export const RegisterPage: React.FC = () => {
         navigate('/');
       }, 1500);
     } catch (err: any) {
-      setError(err.message || `Failed to verify identity with ${provider.toUpperCase()}.`);
+      setError(err.message || t('auth.oauthFailed', 'Failed to verify identity with {{provider}}.', { provider: provider.toUpperCase() }));
     } finally {
       setIsLoading(false);
     }
@@ -131,56 +133,56 @@ export const RegisterPage: React.FC = () => {
   return (
     <div className="min-h-[calc(100vh-140px)] flex flex-col items-center justify-center px-4 py-10 relative">
       {/* Background Decorative Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-[#12141C]/90 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative z-10">
+      <div className="w-full max-w-md bg-secondary/90 border border-border rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative z-10">
         
         {/* Header Title & Badge */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[11px] font-semibold tracking-widest uppercase mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
-            VIP Circle Access
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-500 text-[11px] font-semibold tracking-widest uppercase mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse"></span>
+            {t('auth.vipCircleAccess', 'VIP Circle Access')}
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#F8FAFC] font-bold tracking-tight">
-            Create VIP Credentials
+          <h1 className="font-serif text-2xl sm:text-3xl text-content font-bold tracking-tight">
+            {t('auth.createVipCredentials', 'Create VIP Credentials')}
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1.5">
-            Register your executive profile for bespoke luxury transit.
+          <p className="text-xs sm:text-sm text-muted mt-1.5">
+            {t('auth.registerDesc', 'Register your executive profile for bespoke luxury transit.')}
           </p>
         </div>
 
         {step === 'form' && (
           <>
             {/* Center Aligned Registration Options Toggle */}
-            <div className="flex rounded-xl bg-[#0A0B0E] p-1 border border-white/10 mb-6">
+            <div className="flex rounded-xl bg-primary p-1 border border-border mb-6">
               <button
                 type="button"
                 onClick={() => { setAuthMethod('email'); setError(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                   authMethod === 'email'
-                    ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-gold-500 text-black shadow-md'
+                    : 'text-muted hover:text-content'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect width="20" height="16" x="2" y="4" rx="2" />
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                 </svg>
-                Email Address
+                {t('auth.emailAddress', 'Email Address')}
               </button>
               <button
                 type="button"
                 onClick={() => { setAuthMethod('phone'); setError(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                   authMethod === 'phone'
-                    ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-gold-500 text-black shadow-md'
+                    : 'text-muted hover:text-content'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
-                Phone Number
+                {t('auth.phoneNumber', 'Phone Number')}
               </button>
             </div>
 
@@ -197,7 +199,7 @@ export const RegisterPage: React.FC = () => {
 
             <form onSubmit={handleRegister} className="space-y-4">
               <Input
-                label="Full Legal Name"
+                label={t('auth.fullName', 'Full Legal Name')}
                 placeholder="e.g. Lord Alistair Vance"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -211,7 +213,7 @@ export const RegisterPage: React.FC = () => {
 
               {authMethod === 'email' ? (
                 <Input
-                  label="VIP Email Address"
+                  label={t('auth.vipEmail', 'VIP Email Address')}
                   type="email"
                   placeholder="client@noirride.vip"
                   value={contactValue}
@@ -225,7 +227,7 @@ export const RegisterPage: React.FC = () => {
                 />
               ) : (
                 <Input
-                  label="Traditional Phone Number"
+                  label={t('auth.traditionalPhone', 'Traditional Phone Number')}
                   type="tel"
                   placeholder="+40 722 000 000 / +44 7700 900077"
                   value={contactValue}
@@ -239,7 +241,7 @@ export const RegisterPage: React.FC = () => {
               )}
 
               <Input
-                label="Security Passphrase"
+                label={t('auth.securityPassphrase', 'Security Passphrase')}
                 type="password"
                 placeholder="••••••••••••"
                 value={password}
@@ -257,11 +259,11 @@ export const RegisterPage: React.FC = () => {
                   type="checkbox"
                   checked={agreedTerms}
                   onChange={(e) => setAgreedTerms(e.target.checked)}
-                  className="mt-0.5 rounded border-white/20 bg-[#0A0B0E] text-[#D4AF37] focus:ring-[#D4AF37]/40 w-4 h-4"
+                  className="mt-0.5 rounded border-white/20 bg-primary text-gold-500 focus:ring-gold-500/40 w-4 h-4"
                 />
-                <span className="text-xs text-[#94A3B8] leading-relaxed">
-                  I confirm that I accept the{' '}
-                  <span className="text-[#D4AF37] underline cursor-pointer">Executive Chauffeur Protocol</span> & VIP Data Privacy Terms.
+                <span className="text-xs text-muted leading-relaxed">
+                  {t('auth.confirmAccept', 'I confirm that I accept the ')}
+                  <span className="text-gold-500 underline cursor-pointer">{t('auth.execProtocol', 'Executive Chauffeur Protocol')}</span> {t('auth.privacyTerms', '& VIP Data Privacy Terms.')}
                 </span>
               </label>
 
@@ -269,19 +271,19 @@ export const RegisterPage: React.FC = () => {
                 type="submit"
                 variant="primary"
                 isLoading={isLoading}
-                className="w-full py-3.5 text-xs font-bold tracking-widest uppercase mt-2 shadow-lg shadow-[#D4AF37]/15"
+                className="w-full py-3.5 text-xs font-bold tracking-widest uppercase mt-2 shadow-lg shadow-gold-500/15"
               >
-                Initialize VIP Registration
+                {t('auth.initRegister', 'Initialize VIP Registration')}
               </Button>
             </form>
 
             {/* Separation line with "or" in between */}
             <div className="relative flex items-center w-full my-6">
-              <div className="flex-grow border-t border-white/10"></div>
-              <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-widest text-[#94A3B8] uppercase">
-                or
+              <div className="flex-grow border-t border-border"></div>
+              <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-widest text-muted uppercase">
+                {t('auth.or', 'or')}
               </span>
-              <div className="flex-grow border-t border-white/10"></div>
+              <div className="flex-grow border-t border-border"></div>
             </div>
 
             {/* OAuth 2.0 (Google or iPhone / Apple registration) */}
@@ -290,7 +292,7 @@ export const RegisterPage: React.FC = () => {
                 type="button"
                 onClick={() => handleOAuth('google')}
                 disabled={isLoading}
-                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-[#1A1D28] border border-white/10 hover:bg-[#222634] hover:border-white/25 text-[#F8FAFC] text-xs font-medium transition-all duration-200"
+                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-tertiary border border-border hover:bg-black/20 dark:hover:bg-[#222634] hover:border-border/50 text-content text-xs font-medium transition-all duration-200"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24">
                   <path
@@ -317,7 +319,7 @@ export const RegisterPage: React.FC = () => {
                 type="button"
                 onClick={() => handleOAuth('apple')}
                 disabled={isLoading}
-                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-[#1A1D28] border border-white/10 hover:bg-[#222634] hover:border-white/25 text-[#F8FAFC] text-xs font-medium transition-all duration-200"
+                className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-tertiary border border-border hover:bg-black/20 dark:hover:bg-[#222634] hover:border-border/50 text-content text-xs font-medium transition-all duration-200"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white">
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.35c.64-.78 1.08-1.86.96-2.95-.94.04-2.09.63-2.75 1.4-.59.68-.96 1.78-.82 2.85 1.05.08 2.15-.53 2.61-1.3" />
@@ -331,15 +333,15 @@ export const RegisterPage: React.FC = () => {
         {step === 'verification' && (
           <form onSubmit={handleVerifyCode} className="space-y-5 py-4 animate-fade-in">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] mx-auto mb-3">
+              <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-500 mx-auto mb-3">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
               </div>
-              <h3 className="font-serif text-lg font-bold text-white">Security Verification</h3>
-              <p className="text-xs text-[#94A3B8] mt-1">
-                Protocol Verification for <span className="text-[#D4AF37] font-mono">{contactValue || 'your contact'}</span>
+              <h3 className="font-serif text-lg font-bold text-white">{t('auth.secVerification', 'Security Verification')}</h3>
+              <p className="text-xs text-muted mt-1">
+                {t('auth.protocolVerificationFor', 'Protocol Verification for')} <span className="text-gold-500 font-mono">{contactValue || 'your contact'}</span>
               </p>
             </div>
 
@@ -347,20 +349,20 @@ export const RegisterPage: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-center animate-fade-in">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 mb-1 flex items-center justify-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  Dispatch Delivered to Inbox
+                  {t('auth.dispatchDelivered', 'Dispatch Delivered to Inbox')}
                 </div>
-                <p className="text-[11px] text-[#E2E8F0] leading-relaxed">
-                  We sent an encrypted verification token directly to <strong className="text-white font-mono">{contactValue}</strong> via Resend. Please check your inbox or spam folder.
+                <p className="text-[11px] text-content leading-relaxed">
+                  {t('auth.sentEncrypted', 'We sent an encrypted verification token directly to')} <strong className="text-white font-mono">{contactValue}</strong> {t('auth.viaResend', 'via Resend. Please check your inbox or spam folder.')}
                 </p>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#D4AF37] mb-1 flex items-center justify-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-ping"></span>
-                  Security Code Required
+              <div className="p-3.5 rounded-xl bg-gold-500/10 border border-gold-500/30 text-center">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-gold-500 mb-1 flex items-center justify-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-ping"></span>
+                  {t('auth.secCodeRequired', 'Security Code Required')}
                 </div>
-                <p className="text-[11px] text-[#E2E8F0] leading-relaxed">
-                  A verification code has been dispatched. Please retrieve the token from your email inbox.
+                <p className="text-[11px] text-content leading-relaxed">
+                  {t('auth.codeDispatched', 'A verification code has been dispatched. Please retrieve the token from your email inbox.')}
                 </p>
               </div>
             )}
@@ -371,19 +373,19 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowSimulator(!showSimulator)}
-                  className="text-[10px] font-semibold tracking-wider text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors uppercase underline"
+                  className="text-[10px] font-semibold tracking-wider text-gold-500/60 hover:text-gold-500 transition-colors uppercase underline"
                 >
                   {showSimulator ? 'Hide Local Simulator' : 'Show Local Simulator'}
                 </button>
                 {showSimulator && (
-                  <div className="p-3 mt-2 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 text-center animate-fade-in">
-                    <p className="text-[10px] text-[#E2E8F0] mb-2 font-mono">
-                      Clearance Token: <strong className="text-[#D4AF37] text-xs">{generatedCode}</strong>
+                  <div className="p-3 mt-2 rounded-xl bg-gold-500/5 border border-gold-500/20 text-center animate-fade-in">
+                    <p className="text-[10px] text-content mb-2 font-mono">
+                      Clearance Token: <strong className="text-gold-500 text-xs">{generatedCode}</strong>
                     </p>
                     <button
                       type="button"
                       onClick={() => setVerificationCode(generatedCode)}
-                      className="text-[9px] font-semibold bg-[#D4AF37] text-black px-2 py-0.5 rounded hover:bg-[#E5C158] transition-colors uppercase tracking-wider"
+                      className="text-[9px] font-semibold bg-gold-500 text-black px-2 py-0.5 rounded hover:bg-[#E5C158] transition-colors uppercase tracking-wider"
                     >
                       Auto-Fill Code
                     </button>
@@ -399,7 +401,7 @@ export const RegisterPage: React.FC = () => {
             )}
 
             <Input
-              label="Enter 6-Digit Code"
+              label={t('auth.enterCode', 'Enter 6-Digit Code')}
               placeholder="e.g. 123456"
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
@@ -413,15 +415,15 @@ export const RegisterPage: React.FC = () => {
               isLoading={isLoading}
               className="w-full py-3 text-xs font-bold tracking-widest uppercase"
             >
-              Verify & Complete Registration
+              {t('auth.verifyComplete', 'Verify & Complete Registration')}
             </Button>
 
             <button
               type="button"
               onClick={() => setStep('form')}
-              className="w-full text-center text-xs text-[#94A3B8] hover:text-white transition-colors"
+              className="w-full text-center text-xs text-muted hover:text-content transition-colors"
             >
-              ← Back to registration options
+              {t('auth.backToReg', '← Back to registration options')}
             </button>
           </form>
         )}
@@ -433,9 +435,9 @@ export const RegisterPage: React.FC = () => {
                 <path d="M20 6 9 17l-5-5" />
               </svg>
             </div>
-            <h3 className="font-serif text-xl font-bold text-white">VIP Account Initialized</h3>
-            <p className="text-xs sm:text-sm text-[#94A3B8] max-w-xs mx-auto leading-relaxed">
-              Welcome to the NoirRide Executive Circle, <span className="text-[#D4AF37] font-medium">{fullName || 'VIP Client'}</span>. Your profile is active and synced with dispatch.
+            <h3 className="font-serif text-xl font-bold text-white">{t('auth.vipAccountInit', 'VIP Account Initialized')}</h3>
+            <p className="text-xs sm:text-sm text-muted max-w-xs mx-auto leading-relaxed">
+              {t('auth.welcomeCircle', 'Welcome to the NoirRide Executive Circle, ')} <span className="text-gold-500 font-medium">{fullName || t('auth.vipClient', 'VIP Client')}</span>. {t('auth.profileActive', 'Your profile is active and synced with dispatch.')}
             </p>
             <div className="pt-3">
               <Button
@@ -443,7 +445,7 @@ export const RegisterPage: React.FC = () => {
                 variant="primary"
                 className="w-full py-3 text-xs font-bold tracking-widest uppercase"
               >
-                Proceed to Book Ride
+                {t('auth.proceedToBook', 'Proceed to Book Ride')}
               </Button>
             </div>
           </div>
@@ -451,10 +453,10 @@ export const RegisterPage: React.FC = () => {
 
         {/* Footer Login Link */}
         <div className="mt-8 pt-5 border-t border-white/5 text-center">
-          <p className="text-xs text-[#94A3B8]">
-            Already have an executive profile?{' '}
-            <Link to="/login" className="text-[#D4AF37] hover:underline font-semibold ml-1">
-              Log In
+          <p className="text-xs text-muted">
+            {t('auth.alreadyHaveProfile', 'Already have an executive profile? ')}
+            <Link to="/login" className="text-gold-500 hover:underline font-semibold ml-1">
+              {t('auth.login', 'Log In')}
             </Link>
           </p>
         </div>

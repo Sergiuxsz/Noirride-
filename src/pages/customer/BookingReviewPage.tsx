@@ -87,14 +87,14 @@ export const BookingReviewPage: React.FC = () => {
   if (isSuccess) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center container-custom animate-fade-in">
-        <div className="p-8 rounded-2xl bg-[#12141C] border border-[#D4AF37] max-w-md text-center space-y-4 shadow-2xl">
+        <div className="p-8 rounded-2xl bg-secondary border border-gold-500 max-w-md text-center space-y-4 shadow-2xl">
           <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
             <CheckCircle2 size={36} />
           </div>
-          <h2 className="font-serif text-2xl font-bold text-[#F8FAFC]">
+          <h2 className="font-serif text-2xl font-bold text-content">
             Transfer Protocol Confirmed
           </h2>
-          <p className="text-sm text-[#94A3B8]">
+          <p className="text-sm text-muted">
             Your executive dossier has been locked and assigned to our top-tier chauffeur. Redirecting to live trip telemetry...
           </p>
         </div>
@@ -105,31 +105,31 @@ export const BookingReviewPage: React.FC = () => {
   return (
     <div className="min-h-[calc(100vh-65px)] pb-16 animate-fade-in">
       <div className="container-custom max-w-4xl pt-8 space-y-6">
-        <div className="flex items-center justify-between border-b border-white/10 pb-6">
+        <div className="flex items-center justify-between border-b border-border pb-6">
           <div>
             <button
               onClick={() => navigate('/select-vehicle')}
-              className="inline-flex items-center gap-1.5 text-xs text-[#94A3B8] hover:text-[#D4AF37] mb-2 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-gold-500 mb-2 transition-colors"
             >
               <ArrowLeft size={14} /> Back to Fleet Selection
             </button>
-            <span className="block text-xs uppercase tracking-widest text-[#D4AF37] font-semibold">
+            <span className="block text-xs uppercase tracking-widest text-gold-500 font-semibold">
               Step 3 of 3
             </span>
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#F8FAFC]">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-content">
               Review & Finalize Dossier
             </h1>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#94A3B8] bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
-            <Lock size={14} className="text-[#D4AF37]" /> 256-Bit Encrypted Protocol
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted bg-white/5 px-3 py-1.5 rounded-xl border border-border">
+            <Lock size={14} className="text-gold-500" /> 256-Bit Encrypted Protocol
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Customer Details & Form */}
           <div className="lg:col-span-7 space-y-6">
-            <form onSubmit={handleConfirm} className="p-6 rounded-2xl bg-[#12141C] border border-white/10 space-y-5">
-              <h3 className="font-serif text-lg font-bold text-[#F8FAFC] border-b border-white/10 pb-3">
+            <form onSubmit={handleConfirm} className="p-6 rounded-2xl bg-secondary border border-border space-y-5">
+              <h3 className="font-serif text-lg font-bold text-content border-b border-border pb-3">
                 Passenger Credentials
               </h3>
 
@@ -160,7 +160,7 @@ export const BookingReviewPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
+                <label className="text-xs font-medium uppercase tracking-wider text-muted">
                   Chauffeur Instructions / Flight Code
                 </label>
                 <textarea
@@ -168,11 +168,11 @@ export const BookingReviewPage: React.FC = () => {
                   value={specialRequests}
                   onChange={(e) => setSpecialRequests(e.target.value)}
                   placeholder="e.g. Flight BA 178 arriving Terminal 4. Chilled sparkling water. Silent ride preferred."
-                  className="w-full bg-[#1A1D28] text-[#F8FAFC] placeholder-[#64748B] border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-[#D4AF37] resize-none"
+                  className="w-full bg-tertiary text-content placeholder-muted border border-border rounded-lg p-3 text-sm focus:outline-none focus:border-gold-500 resize-none"
                 />
               </div>
 
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-border">
                 <Button
                   type="submit"
                   size="lg"
@@ -184,7 +184,7 @@ export const BookingReviewPage: React.FC = () => {
               </div>
             </form>
 
-            <div className="p-4 rounded-xl bg-[#1A1D28]/40 border border-white/5 text-xs text-[#94A3B8] leading-relaxed">
+            <div className="p-4 rounded-xl bg-tertiary/40 border border-white/5 text-xs text-muted leading-relaxed">
               By confirming this reservation, you authorize NoirRide to lock the scheduled chauffeur dispatch. You may modify or terminate your reservation up to 2 hours prior to scheduled arrival with zero penalty.
             </div>
           </div>

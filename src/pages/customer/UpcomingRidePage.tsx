@@ -8,15 +8,28 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useRideContext } from '../../context/RideContext';
+import { useTranslation } from 'react-i18next';
 import type { RideStatus } from '../../types';
 
 export const UpcomingRidePage: React.FC = () => {
   const navigate = useNavigate();
   const { confirmedRide, cancelConfirmedRide, updateRideStatus } = useRideContext();
+  const { t } = useTranslation();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [etaSeconds, setEtaSeconds] = useState<number>(480);
-
   const activeTrip = confirmedRide;
+
+  const [etaSeconds, setEtaSeconds] = useState<number>(() => {
+    return activeTrip?.currentEta ?? activeTrip?.etaSeconds ?? activeTrip?.pickupEtaSeconds ?? 300;
+  });
+
+  React.useEffect(() => {
+    if (activeTrip) {
+      const initial = activeTrip.currentEta ?? activeTrip.etaSeconds ?? activeTrip.pickupEtaSeconds;
+      if (typeof initial === 'number' && initial > 0) {
+        setEtaSeconds(initial);
+      }
+    }
+  }, [activeTrip?.id, activeTrip?.currentEta, activeTrip?.etaSeconds]);
 
   if (!activeTrip) {
     return (
@@ -50,7 +63,9 @@ export const UpcomingRidePage: React.FC = () => {
     if (!activeTrip || ['CANCELLED', 'COMPLETED'].includes(activeTrip.status)) return;
     
     const mappedStatus = mapTelemetryStatus(status);
-    setEtaSeconds(currentEtaSeconds);
+    if (typeof currentEtaSeconds === 'number' && !isNaN(currentEtaSeconds) && currentEtaSeconds > 0) {
+      setEtaSeconds(currentEtaSeconds);
+    }
 
     if (mappedStatus !== activeTrip.status) {
       updateRideStatus(activeTrip.id, mappedStatus);
@@ -75,7 +90,7 @@ export const UpcomingRidePage: React.FC = () => {
         return {
           title: `Chauffeur ${activeTrip.driverName || 'Executive Chauffeur'} has arrived!`,
           description: `Your chauffeur is waiting at the pickup location: ${activeTrip.pickupLocation.split(',')[0]}.`,
-          color: 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]',
+          color: 'bg-[#D4AF37]/10 border-gold-500/30 text-gold-500',
           dotColor: 'bg-[#D4AF37]'
         };
       case 'IN_PROGRESS':
@@ -109,13 +124,13 @@ export const UpcomingRidePage: React.FC = () => {
     <div className="min-h-[calc(100vh-65px)] pb-16 animate-fade-in">
       <div className="container-custom max-w-4xl pt-8 space-y-6">
         {/* Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
           <div>
-            <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#D4AF37]">
+            <span className="text-xs font-mono font-semibold uppercase tracking-widest text-gold-500">
               Dossier Ref: {activeTrip.id}
             </span>
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#F8FAFC]">
-              Live Chauffeur Telemetry
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-content">
+              {t('trip.liveTelemetry', 'Live Chauffeur Telemetry')}
             </h1>
           </div>
 
@@ -126,7 +141,7 @@ export const UpcomingRidePage: React.FC = () => {
                 size="sm"
                 onClick={() => setIsCancelModalOpen(true)}
               >
-                Terminate Reservation
+                {t('trip.terminate', 'Terminate Reservation')}
               </Button>
             )}
             <Button
@@ -134,7 +149,7 @@ export const UpcomingRidePage: React.FC = () => {
               size="sm"
               onClick={() => navigate('/dispatch')}
             >
-              Operator View
+              {t('trip.operator', 'Operator View')}
             </Button>
           </div>
         </div>
@@ -153,7 +168,7 @@ export const UpcomingRidePage: React.FC = () => {
                 </span>
               </div>
             </div>
-            <span className="font-mono text-xs text-[#D4AF37] bg-[#12141C] px-3 py-1 rounded border border-white/10 hidden sm:inline">
+            <span className="font-mono text-xs text-gold-500 bg-secondary px-3 py-1 rounded border border-border hidden sm:inline">
               LIVE 5G PROTOCOL
             </span>
           </div>
@@ -167,45 +182,45 @@ export const UpcomingRidePage: React.FC = () => {
           {/* Left Column: Route Summary & Timeline */}
           <div className="md:col-span-7 space-y-6">
             {/* Route Summary Card */}
-            <div className="p-6 rounded-2xl bg-[#12141C] border border-white/10 space-y-5">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-xs font-serif uppercase tracking-widest text-[#D4AF37]">
+            <div className="p-6 rounded-2xl bg-secondary border border-border space-y-5">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-xs font-serif uppercase tracking-widest text-gold-500">
                   Route Specification
                 </span>
-                <span className="text-xs text-[#94A3B8] uppercase">
+                <span className="text-xs text-muted uppercase">
                   {activeTrip.serviceType} Service
                 </span>
               </div>
 
               <div className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-full bg-white/5 text-[#D4AF37] mt-0.5">
+                  <div className="p-2 rounded-full bg-white/5 text-gold-500 mt-0.5">
                     <MapPin size={16} />
                   </div>
                   <div>
-                    <span className="block text-[11px] uppercase text-[#94A3B8]">Pickup Address</span>
-                    <span className="font-medium text-[#F8FAFC]">{activeTrip.pickupLocation}</span>
+                    <span className="block text-[11px] uppercase text-muted">Pickup Address</span>
+                    <span className="font-medium text-content">{activeTrip.pickupLocation}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-full bg-white/5 text-[#D4AF37] mt-0.5">
+                  <div className="p-2 rounded-full bg-white/5 text-gold-500 mt-0.5">
                     <Navigation size={16} />
                   </div>
                   <div>
-                    <span className="block text-[11px] uppercase text-[#94A3B8]">Destination Address</span>
-                    <span className="font-medium text-[#F8FAFC]">{activeTrip.destination}</span>
+                    <span className="block text-[11px] uppercase text-muted">Destination Address</span>
+                    <span className="font-medium text-content">{activeTrip.destination}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 text-xs">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border text-xs">
                 <div className="flex items-center gap-2">
-                  <Calendar size={15} className="text-[#D4AF37]" />
+                  <Calendar size={15} className="text-gold-500" />
                   <span>{activeTrip.date}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock size={15} className="text-[#D4AF37]" />
+                  <Clock size={15} className="text-gold-500" />
                   <span>Scheduled: {activeTrip.time}</span>
                 </div>
               </div>
@@ -236,15 +251,15 @@ export const UpcomingRidePage: React.FC = () => {
             />
 
             {/* Fare confirmation box */}
-            <div className="p-6 rounded-2xl bg-[#12141C] border border-white/10 space-y-3">
-              <span className="text-[11px] uppercase tracking-widest text-[#94A3B8]">
+            <div className="p-6 rounded-2xl bg-secondary border border-border space-y-3">
+              <span className="text-[11px] uppercase tracking-widest text-muted">
                 Payment Security Dossier
               </span>
               <div className="flex items-center justify-between">
-                <span className="font-serif text-base font-bold text-[#F8FAFC]">Guaranteed Total Fare</span>
-                <span className="font-serif text-2xl font-bold text-[#D4AF37]">${activeTrip.price}</span>
+                <span className="font-serif text-base font-bold text-content">Guaranteed Total Fare</span>
+                <span className="font-serif text-2xl font-bold text-gold-500">${activeTrip.price}</span>
               </div>
-              <p className="text-xs text-[#94A3B8] pt-2 border-t border-white/10">
+              <p className="text-xs text-muted pt-2 border-t border-border">
                 Authorized on corporate account for {activeTrip.customerName}. Automated tax invoice sent to {activeTrip.customerEmail}.
               </p>
             </div>
@@ -275,7 +290,7 @@ export const UpcomingRidePage: React.FC = () => {
               You are about to cancel Chauffeur protocol {activeTrip.id}. Because you are canceling within our complimentary grace window, <strong>$0 cancellation fees</strong> will apply.
             </span>
           </div>
-          <p className="text-sm text-[#F8FAFC]">
+          <p className="text-sm text-content">
             Are you certain you wish to release chauffeur <strong>{activeTrip.driverName}</strong> and vehicle <strong>{activeTrip.vehicleName}</strong>?
           </p>
         </div>

@@ -3,6 +3,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useGoogleMapsScript } from '../../hooks/useGoogleMapsScript';
 import { getVehicleMarkerSVG } from '../map/VehicleMarkerIcons';
+import { useTranslation } from 'react-i18next';
 
 interface DriverState {
   id: string;
@@ -42,6 +43,7 @@ export const FleetLiveMap: React.FC = () => {
   const driversRef = useRef<Map<string, DriverState>>(new Map());
   const routesRef = useRef<Map<string, ActiveRouteGraphics>>(new Map());
   const animationRef = useRef<number>();
+  const { t } = useTranslation();
 
   // Initialize Map
   useEffect(() => {
@@ -84,12 +86,14 @@ export const FleetLiveMap: React.FC = () => {
 
     const unsubscribeDrivers = onSnapshot(collection(db, 'drivers'), (snapshot) => {
       const now = performance.now();
+      const currentDocIds = new Set<string>();
 
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (!data.location) return; // Ignore drivers without location
 
         const id = doc.id;
+        currentDocIds.add(id);
         const coords = data.location;
         const driverName = data.name || id;
         const status = data.isAvailable ? 'available' : 'busy';
@@ -105,7 +109,7 @@ export const FleetLiveMap: React.FC = () => {
           container.style.alignItems = 'center';
 
           const label = document.createElement('div');
-          label.innerText = status === 'busy' ? `${driverName} (Busy)` : driverName;
+          label.innerText = status === 'busy' ? `${driverName} ${t('dispatch.busy', '(Busy)')}` : driverName;
           label.style.color = '#FFFFFF';
           label.style.fontFamily = 'sans-serif';
           label.style.fontSize = '12px';
@@ -142,9 +146,9 @@ export const FleetLiveMap: React.FC = () => {
         } else {
           // Update position interpolation targets
           const elapsed = (now - existing.lastUpdate) / 1000;
-          const t = Math.min(elapsed, 1.0);
-          const currentLat = existing.startPos.lat + (existing.targetPos.lat - existing.startPos.lat) * t;
-          const currentLng = existing.startPos.lng + (existing.targetPos.lng - existing.startPos.lng) * t;
+          const lerpProgress = Math.min(elapsed, 1.0);
+          const currentLat = existing.startPos.lat + (existing.targetPos.lat - existing.startPos.lat) * lerpProgress;
+          const currentLng = existing.startPos.lng + (existing.targetPos.lng - existing.startPos.lng) * lerpProgress;
           
           let bearing = existing.bearing;
           if (coords.lat !== existing.targetPos.lat || coords.lng !== existing.targetPos.lng) {
@@ -167,9 +171,17 @@ export const FleetLiveMap: React.FC = () => {
           // Update label conditionally
           if (existing.container && existing.container.firstChild) {
              (existing.container.firstChild as HTMLElement).innerText = status === 'busy'
-               ? `${existing.name} (Busy)` 
+               ? `${existing.name} ${t('dispatch.busy', '(Busy)')}` 
                : existing.name;
           }
+        }
+      });
+
+      // Cleanup drivers that are no longer in Firestore
+      driversRef.current.forEach((driver, id) => {
+        if (!currentDocIds.has(id)) {
+          if (driver.marker) driver.marker.map = null;
+          driversRef.current.delete(id);
         }
       });
     });
@@ -184,16 +196,20 @@ export const FleetLiveMap: React.FC = () => {
     if (!map || !isLoaded) return;
 
     const unsubscribeRides = onSnapshot(collection(db, 'rides'), (snapshot) => {
+      const currentRideIds = new Set<string>();
+
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
         const rideId = doc.id;
+        currentRideIds.add(rideId);
         const status = data.status;
+        const isActiveRide = status === 'EN_ROUTE' || status === 'ARRIVED' || status === 'IN_PROGRESS';
 
-        if (status === 'EN_ROUTE' && data.routePolyline && data.routePolyline.length > 0) {
+        if (isActiveRide && Array.isArray(data.routePolyline) && data.routePolyline.length > 0) {
           if (!routesRef.current.has(rideId)) {
             const driverId = data.driverId;
             const driverColor = getDriverColor(driverId);
-            const path = data.routePolyline;
+            const path = data.routePolyline.map((p: any) => ({ lat: p.lat, lng: p.lng }));
 
             const polyline = new google.maps.Polyline({
               path: path,
@@ -233,8 +249,11 @@ export const FleetLiveMap: React.FC = () => {
             });
 
             routesRef.current.set(rideId, { polyline, pickupMarker, destMarker });
+            
+            // Optional: gently pan to the new route pickup
+            map.panTo(pickupCoords);
           }
-        } else if (status === 'COMPLETED' || status === 'CANCELLED') {
+        } else {
           const routeObj = routesRef.current.get(rideId);
           if (routeObj) {
             routeObj.polyline.setMap(null);
@@ -242,6 +261,16 @@ export const FleetLiveMap: React.FC = () => {
             routeObj.destMarker.map = null;
             routesRef.current.delete(rideId);
           }
+        }
+      });
+
+      // Cleanup routes that are no longer in Firestore
+      routesRef.current.forEach((routeObj, rideId) => {
+        if (!currentRideIds.has(rideId)) {
+          routeObj.polyline.setMap(null);
+          routeObj.pickupMarker.map = null;
+          routeObj.destMarker.map = null;
+          routesRef.current.delete(rideId);
         }
       });
     });
@@ -262,10 +291,10 @@ export const FleetLiveMap: React.FC = () => {
         if (!driver.marker || !driver.carElement) return;
 
         const elapsed = (now - driver.lastUpdate) / 1000;
-        const t = Math.min(elapsed, 1.0);
+        const lerpProgress = Math.min(elapsed, 1.0);
         
-        const lat = driver.startPos.lat + (driver.targetPos.lat - driver.startPos.lat) * t;
-        const lng = driver.startPos.lng + (driver.targetPos.lng - driver.startPos.lng) * t;
+        const lat = driver.startPos.lat + (driver.targetPos.lat - driver.startPos.lat) * lerpProgress;
+        const lng = driver.startPos.lng + (driver.targetPos.lng - driver.startPos.lng) * lerpProgress;
 
         driver.marker.position = { lat, lng };
         driver.carElement.style.transform = `rotate(${driver.bearing}deg)`;
@@ -299,23 +328,23 @@ export const FleetLiveMap: React.FC = () => {
   }, []);
 
   if (error) {
-    return <div className="w-full h-[400px] bg-[#12141C] flex items-center justify-center text-red-400 text-sm border border-white/10 rounded-xl">Error loading map</div>;
+    return <div className="w-full h-[400px] bg-secondary flex items-center justify-center text-red-400 text-sm border border-border rounded-xl">{t('dispatch.mapError', 'Error loading map')}</div>;
   }
 
   return (
-    <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-white/10 mt-6 shadow-lg">
+    <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-border mt-6 shadow-lg">
       <div ref={mapRef} className="absolute inset-0" />
       
       {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#12141C]/80 backdrop-blur-sm z-0">
-          <div className="w-6 h-6 border-2 border-[#FFD700] border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/80 backdrop-blur-sm z-0">
+          <div className="w-6 h-6 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      <div className="absolute top-4 right-4 bg-[#12141C]/90 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 backdrop-blur-sm z-10 shadow-xl">
+      <div className="absolute top-4 right-4 bg-secondary/90 border border-border px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 backdrop-blur-sm z-10 shadow-xl">
         <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-        <span className="text-[#F8FAFC]">
-          {isConnected ? 'Telemetry Active (Firestore)' : 'Connecting to Engine...'}
+        <span className="text-content">
+          {isConnected ? t('dispatch.telemetryActive', 'Telemetry Active (Firestore)') : t('dispatch.connecting', 'Connecting to Engine...')}
         </span>
       </div>
     </div>

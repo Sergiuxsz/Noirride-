@@ -20,14 +20,14 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg select-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0A0B0E] disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg select-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-[#D4AF37] text-[#0A0B0E] hover:bg-[#E5C158] font-semibold tracking-wide shadow-lg shadow-[#D4AF37]/10 focus:ring-[#D4AF37]',
-    secondary: 'bg-[#1A1D28] text-[#F8FAFC] border border-white/10 hover:bg-[#222634] hover:border-white/25 focus:ring-white/20',
-    outline: 'bg-transparent text-[#D4AF37] border border-[#D4AF37]/60 hover:bg-[#D4AF37]/10 hover:border-[#D4AF37] focus:ring-[#D4AF37]',
+    primary: 'bg-gold-500 text-black hover:bg-[#E5C158] font-semibold tracking-wide shadow-lg shadow-gold-500/10 focus:ring-gold-500',
+    secondary: 'bg-secondary text-content border border-border hover:bg-tertiary hover:border-border/80 focus:ring-border',
+    outline: 'bg-transparent text-gold-500 border border-gold-500/60 hover:bg-gold-500/10 hover:border-gold-500 focus:ring-gold-500',
     danger: 'bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 focus:ring-red-500',
-    ghost: 'bg-transparent text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/5 focus:ring-white/20',
+    ghost: 'bg-transparent text-muted hover:text-content hover:bg-black/5 dark:hover:bg-white/5 focus:ring-border',
   };
 
   const sizes = {

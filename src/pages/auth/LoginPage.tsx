@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login, loginWithOAuth, resetPassword } = useAuth();
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
@@ -23,7 +25,7 @@ export const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactValue || !password) {
-      setError('Please provide both credentials.');
+      setError(t('auth.provideCredentials', 'Please provide both credentials.'));
       return;
     }
 
@@ -37,7 +39,7 @@ export const LoginPage: React.FC = () => {
         navigate('/');
       }, 1200);
     } catch (err: any) {
-      setError(err.message || 'Invalid Executive Authentication credentials.');
+      setError(err.message || t('auth.invalidCredentials', 'Invalid Executive Authentication credentials.'));
       setIsLoading(false);
     }
   };
@@ -52,7 +54,7 @@ export const LoginPage: React.FC = () => {
         navigate('/');
       }, 1200);
     } catch (err: any) {
-      setError(err.message || `Failed to verify identity with ${provider.toUpperCase()}.`);
+      setError(err.message || t('auth.oauthFailed', 'Failed to verify identity with {{provider}}.', { provider: provider.toUpperCase() }));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +64,7 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setResetMessage(null);
     if (!resetEmail) {
-      setResetMessage({ type: 'error', text: 'Please enter your email address.' });
+      setResetMessage({ type: 'error', text: t('auth.enterEmail', 'Please enter your email address.') });
       return;
     }
     setIsResetting(true);
@@ -70,10 +72,10 @@ export const LoginPage: React.FC = () => {
       await resetPassword(resetEmail);
       setResetMessage({
         type: 'success',
-        text: 'Password recovery instructions have been dispatched to your executive email address.',
+        text: t('auth.recoverySent', 'Password recovery instructions have been dispatched to your executive email address.'),
       });
     } catch (err: any) {
-      setResetMessage({ type: 'error', text: err.message || 'Failed to send recovery email.' });
+      setResetMessage({ type: 'error', text: err.message || t('auth.recoveryFailed', 'Failed to send recovery email.') });
     } finally {
       setIsResetting(false);
     }
@@ -82,53 +84,53 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-[calc(100vh-140px)] flex flex-col items-center justify-center px-4 py-10 relative">
       {/* Background Decorative Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-[#12141C]/90 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative z-10">
+      <div className="w-full max-w-md bg-secondary/90 border border-border rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative z-10">
         
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[11px] font-semibold tracking-widest uppercase mb-3">
-            Client Authentication
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-500 text-[11px] font-semibold tracking-widest uppercase mb-3">
+            {t('auth.clientAuth', 'Client Authentication')}
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#F8FAFC] font-bold tracking-tight">
-            Log In to NoirRide
+          <h1 className="font-serif text-2xl sm:text-3xl text-content font-bold tracking-tight">
+            {t('auth.loginTitle', 'Log In to NoirRide')}
           </h1>
-          <p className="text-xs sm:text-sm text-[#94A3B8] mt-1.5">
-            Access your active bookings and chauffeur history.
+          <p className="text-xs sm:text-sm text-muted mt-1.5">
+            {t('auth.loginSubtitle', 'Access your active bookings and chauffeur history.')}
           </p>
         </div>
 
         {!isSuccess ? (
           <>
-            <div className="flex rounded-xl bg-[#0A0B0E] p-1 border border-white/10 mb-6">
+            <div className="flex rounded-xl bg-primary p-1 border border-border mb-6">
               <button
                 type="button"
                 onClick={() => { setAuthMethod('email'); setError(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                   authMethod === 'email'
-                    ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-gold-500 text-black shadow-md'
+                    : 'text-muted hover:text-content'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect width="20" height="16" x="2" y="4" rx="2" />
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                 </svg>
-                Email Address
+                {t('auth.emailAddress', 'Email Address')}
               </button>
               <button
                 type="button"
                 onClick={() => { setAuthMethod('phone'); setError(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                   authMethod === 'phone'
-                    ? 'bg-[#D4AF37] text-[#0A0B0E] shadow-md'
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-gold-500 text-black shadow-md'
+                    : 'text-muted hover:text-content'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
-                Phone Number
+                {t('auth.phoneNumber', 'Phone Number')}
               </button>
             </div>
 
@@ -146,7 +148,7 @@ export const LoginPage: React.FC = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               {authMethod === 'email' ? (
                 <Input
-                  label="VIP Email Address"
+                  label={t('auth.vipEmail', 'VIP Email Address')}
                   type="email"
                   placeholder="client@noirride.vip"
                   value={contactValue}
@@ -160,7 +162,7 @@ export const LoginPage: React.FC = () => {
                 />
               ) : (
                 <Input
-                  label="Registered Phone Number"
+                  label={t('auth.registeredPhone', 'Registered Phone Number')}
                   type="tel"
                   placeholder="+40 722 000 000"
                   value={contactValue}
@@ -174,7 +176,7 @@ export const LoginPage: React.FC = () => {
               )}
 
               <Input
-                label="Security Passphrase"
+                label={t('auth.securityPassphrase', 'Security Passphrase')}
                 type="password"
                 placeholder="••••••••••••"
                 value={password}
@@ -188,9 +190,9 @@ export const LoginPage: React.FC = () => {
               />
 
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-[#94A3B8]">
-                  <input type="checkbox" defaultChecked className="rounded border-white/20 bg-[#0A0B0E] text-[#D4AF37] focus:ring-[#D4AF37]/40 w-3.5 h-3.5" />
-                  Remember credentials
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
+                  <input type="checkbox" defaultChecked className="rounded border-white/20 bg-primary text-gold-500 focus:ring-gold-500/40 w-3.5 h-3.5" />
+                  {t('auth.rememberCredentials', 'Remember credentials')}
                 </label>
                  <button
                    type="button"
@@ -199,9 +201,9 @@ export const LoginPage: React.FC = () => {
                      setResetMessage(null);
                      setShowResetModal(true);
                    }}
-                   className="text-xs text-[#D4AF37] hover:underline"
+                   className="text-xs text-gold-500 hover:underline"
                  >
-                   Forgot passphrase?
+                   {t('auth.forgotPassphrase', 'Forgot passphrase?')}
                  </button>
                </div>
 
@@ -209,18 +211,18 @@ export const LoginPage: React.FC = () => {
                  type="submit"
                  variant="primary"
                  isLoading={isLoading}
-                 className="w-full py-3.5 text-xs font-bold tracking-widest uppercase mt-2 shadow-lg shadow-[#D4AF37]/15"
+                 className="w-full py-3.5 text-xs font-bold tracking-widest uppercase mt-2 shadow-lg shadow-gold-500/15"
                >
-                 Log In to Dashboard
+                 {t('auth.loginToDashboard', 'Log In to Dashboard')}
                </Button>
              </form>
 
              <div className="relative flex items-center w-full my-6">
-               <div className="flex-grow border-t border-white/10"></div>
-               <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-widest text-[#94A3B8] uppercase">
-                 or
+               <div className="flex-grow border-t border-border"></div>
+               <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-widest text-muted uppercase">
+                 {t('auth.or', 'or')}
                </span>
-               <div className="flex-grow border-t border-white/10"></div>
+               <div className="flex-grow border-t border-border"></div>
              </div>
 
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
@@ -228,7 +230,7 @@ export const LoginPage: React.FC = () => {
                  type="button"
                  onClick={() => handleOAuth('google')}
                  disabled={isLoading}
-                 className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-[#1A1D28] border border-white/10 hover:bg-[#222634] hover:border-white/25 text-[#F8FAFC] text-xs font-medium transition-all duration-200"
+                 className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-tertiary border border-border hover:bg-[#222634] hover:border-border/50 text-content text-xs font-medium transition-all duration-200"
                >
                  <svg width="16" height="16" viewBox="0 0 24 24">
                    <path
@@ -255,7 +257,7 @@ export const LoginPage: React.FC = () => {
                  type="button"
                  onClick={() => handleOAuth('apple')}
                  disabled={isLoading}
-                 className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-[#1A1D28] border border-white/10 hover:bg-[#222634] hover:border-white/25 text-[#F8FAFC] text-xs font-medium transition-all duration-200"
+                 className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-lg bg-tertiary border border-border hover:bg-[#222634] hover:border-border/50 text-content text-xs font-medium transition-all duration-200"
                >
                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-white">
                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.35c.64-.78 1.08-1.86.96-2.95-.94.04-2.09.63-2.75 1.4-.59.68-.96 1.78-.82 2.85 1.05.08 2.15-.53 2.61-1.3" />
@@ -264,72 +266,72 @@ export const LoginPage: React.FC = () => {
                </button>
              </div>
            </>
-         ) : (
-           <div className="text-center py-8 space-y-4 animate-fade-in">
-             <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] mx-auto mb-2 shadow-lg shadow-[#D4AF37]/10">
-               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                 <path d="M20 6 9 17l-5-5" />
-               </svg>
-             </div>
-             <h3 className="font-serif text-xl font-bold text-white">Authentication Verified</h3>
-             <p className="text-xs sm:text-sm text-[#94A3B8] max-w-xs mx-auto leading-relaxed">
-               Successfully authenticated. Redirecting to your active chauffeur itineraries...
-             </p>
+          ) : (
+            <div className="text-center py-8 space-y-4 animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-500 mx-auto mb-2 shadow-lg shadow-gold-500/10">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </div>
+              <h3 className="font-serif text-xl font-bold text-white">{t('auth.authVerified', 'Authentication Verified')}</h3>
+              <p className="text-xs sm:text-sm text-muted max-w-xs mx-auto leading-relaxed">
+                {t('auth.redirecting', 'Successfully authenticated. Redirecting to your active chauffeur itineraries...')}
+              </p>
              <div className="pt-3">
                <Button
                  onClick={() => navigate('/')}
                  variant="primary"
                  className="w-full py-3 text-xs font-bold tracking-widest uppercase"
                >
-                 Go to Bookings
+                 {t('auth.goToBookings', 'Go to Bookings')}
                </Button>
              </div>
            </div>
          )}
 
-         <div className="mt-8 pt-5 border-t border-white/5 text-center">
-           <p className="text-xs text-[#94A3B8]">
-             New to NoirRide?{' '}
-             <Link to="/register" className="text-[#D4AF37] hover:underline font-semibold ml-1">
-               Apply for VIP Access
-             </Link>
-           </p>
+          <div className="mt-8 pt-5 border-t border-white/5 text-center">
+            <p className="text-xs text-muted">
+              {t('auth.newToNoirRide', 'New to NoirRide? ')}
+              <Link to="/register" className="text-gold-500 hover:underline font-semibold ml-1">
+                {t('auth.applyVipAccess', 'Apply for VIP Access')}
+              </Link>
+            </p>
          </div>
        </div>
 
        {/* Forgot Passphrase Modal */}
        {showResetModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-           <div className="w-full max-w-md bg-[#12141C] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+           <div className="w-full max-w-md bg-secondary border border-border rounded-2xl p-6 sm:p-8 shadow-2xl relative">
              <button
                type="button"
                onClick={() => setShowResetModal(false)}
-               className="absolute top-4 right-4 text-[#94A3B8] hover:text-white p-1 rounded-lg transition-colors"
+               className="absolute top-4 right-4 text-muted hover:text-white p-1 rounded-lg transition-colors"
              >
                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                  <path d="M18 6 6 18M6 6l12 12" />
                </svg>
              </button>
 
-             <div className="text-center mb-6">
-               <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] mx-auto mb-3">
-                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                   <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2v0Z" />
-                   <path d="M12 8v4" />
-                   <path d="M12 16h.01" />
-                 </svg>
-               </div>
-               <h3 className="font-serif text-xl font-bold text-white tracking-tight">
-                 Executive Credential Recovery
-               </h3>
-               <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
-                 Enter your executive email to dispatch secure password recovery instructions.
-               </p>
-             </div>
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-500 mx-auto mb-3">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2v0Z" />
+                    <path d="M12 8v4" />
+                    <path d="M12 16h.01" />
+                  </svg>
+                </div>
+                <h3 className="font-serif text-xl font-bold text-white tracking-tight">
+                  {t('auth.recoveryTitle', 'Executive Credential Recovery')}
+                </h3>
+                <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                  {t('auth.recoveryDesc', 'Enter your executive email to dispatch secure password recovery instructions.')}
+                </p>
+              </div>
 
              <form onSubmit={handleResetPassword} className="space-y-4">
                <Input
-                 label="Executive Email Address"
+                 label={t('auth.executiveEmail', 'Executive Email Address')}
                  type="email"
                  placeholder="client@noirride.vip"
                  value={resetEmail}
@@ -362,9 +364,9 @@ export const LoginPage: React.FC = () => {
                  <button
                    type="button"
                    onClick={() => setShowResetModal(false)}
-                   className="flex-1 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold uppercase tracking-widest border border-white/10 transition-colors"
+                   className="flex-1 py-3 px-4 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-content text-xs font-semibold uppercase tracking-widest border border-border transition-colors"
                  >
-                   Cancel
+                   {t('common.cancel', 'Cancel')}
                  </button>
                  <Button
                    type="submit"
@@ -372,7 +374,7 @@ export const LoginPage: React.FC = () => {
                    isLoading={isResetting}
                    className="flex-1 py-3 text-xs font-bold tracking-widest uppercase"
                  >
-                   Send Link
+                   {t('auth.sendLink', 'Send Link')}
                  </Button>
                </div>
              </form>

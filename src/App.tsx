@@ -20,7 +20,7 @@ const AppContent: React.FC = () => {
   const isDispatch = location.pathname.startsWith('/dispatch') || location.pathname.startsWith('/adminroles');
 
   return (
-    <div className="min-h-screen text-[#F8FAFC] flex flex-col font-sans selection:bg-[#D4AF37] selection:text-[#0A0B0E] relative pb-16">
+    <div className="min-h-screen text-content flex flex-col font-sans selection:bg-gold-500 selection:text-primary relative pb-16 bg-primary transition-colors">
       {/* Background Starry sky overlay that pulses on the dispatch page */}
       <div
         className={`fixed inset-0 pointer-events-none -z-20 bg-[url('./assets/starry-bg.webp')] bg-[length:500px] bg-repeat bg-center bg-fixed transition-all ${isDispatch ? 'animate-bg-pulse-seconds' : ''

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, UserCheck, Star, Car } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { HourglassTimer } from '../../../components/ui/HourglassTimer';
 import type { BookingFormState, Driver } from '../../../types';
@@ -23,20 +24,22 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
   goBack,
   drivers,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="container-custom max-w-4xl pt-4 animate-fade-in">
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 text-xs text-[#94A3B8] hover:text-[#D4AF37] mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-gold-500 mb-6 transition-colors"
       >
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t('booking.back', 'Back')}
       </button>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#F8FAFC]">Private Chauffeurs</h2>
-          <p className="text-sm text-[#94A3B8] mt-1">Select your preferred professional for the journey.</p>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-content">{t('booking.selectChauffeur', 'Private Chauffeurs')}</h2>
+          <p className="text-sm text-muted mt-1">{t('booking.choose_chauffeur', 'Select your preferred professional for the journey.')}</p>
         </div>
       </div>
 
@@ -62,10 +65,10 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
               }}
               className={`relative overflow-hidden rounded-2xl border transition-all duration-300 flex flex-col p-4 ${
                 isSelected
-                  ? 'bg-[#181A20] border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)] scale-[1.02]'
+                  ? 'bg-primary border-gold-500 shadow-[0_0_20px_rgba(212,175,55,0.15)] scale-[1.02]'
                   : isBusy
-                    ? 'bg-[#0A0B0E]/80 border-white/5 opacity-60 cursor-not-allowed grayscale-[0.8]'
-                    : 'bg-[#12141C] border-white/10 hover:border-white/30 cursor-pointer hover:bg-[#181A20]'
+                    ? 'bg-primary/80 border-white/5 opacity-60 cursor-not-allowed grayscale-[0.8]'
+                    : 'bg-secondary border-border hover:border-border/50 cursor-pointer hover:bg-primary'
               }`}
               onClick={() => {
                 if (!isBusy) {
@@ -75,7 +78,7 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
             >
               <div className="flex gap-4 items-start">
                 {/* Driver Photo */}
-                <div className="relative w-16 h-16 rounded-full overflow-hidden border border-white/10 flex-shrink-0">
+                <div className="relative w-16 h-16 rounded-full overflow-hidden border border-border flex-shrink-0">
                   <img src={driver.photo} alt={driver.name} className="w-full h-full object-cover" />
                 </div>
                 
@@ -83,14 +86,14 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
                 <div className="flex-1 flex flex-col">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-sans font-bold text-[#F8FAFC] text-base">{driver.name}</h3>
+                      <h3 className="font-sans font-bold text-content text-base">{driver.name}</h3>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <Star size={12} className="text-[#D4AF37] fill-current" />
-                        <span className="text-xs text-[#E2E8F0] font-semibold">{driver.rating}</span>
-                        <span className="text-xs text-[#64748B] ml-1">({driver.completedRides} trips)</span>
+                        <Star size={12} className="text-gold-500 fill-current" />
+                        <span className="text-xs text-content font-semibold">{driver.rating}</span>
+                        <span className="text-xs text-muted ml-1">({driver.completedRides} {t('booking.trips', 'trips')})</span>
                       </div>
                       {driver.tagline && (
-                        <p className="text-[11px] text-[#D4AF37] italic mt-1 font-serif">
+                        <p className="text-[11px] text-gold-500 italic mt-1 font-serif">
                           "{driver.tagline}"
                         </p>
                       )}
@@ -102,13 +105,13 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 mt-3 text-[#94A3B8] text-xs">
-                    <Car size={14} className="text-[#D4AF37]" />
+                  <div className="flex items-center gap-2 mt-3 text-muted text-xs">
+                    <Car size={14} className="text-gold-500" />
                     <span className="truncate">{driver.vehicleMake} • {driver.licensePlate}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {driver.languages.map((lang) => (
-                      <span key={lang} className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                      <span key={lang} className="px-2 py-0.5 rounded-full bg-white/5 border border-border text-[10px] uppercase tracking-wider text-muted">
                         {lang}
                       </span>
                     ))}
@@ -117,7 +120,7 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
               </div>
               
               {isSelected && (
-                <div className="absolute top-4 right-4 text-[#D4AF37]">
+                <div className="absolute top-4 right-4 text-gold-500">
                   <UserCheck size={20} />
                 </div>
               )}
@@ -130,10 +133,10 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
         <p className="text-xs text-red-400 mb-4 animate-fade-in">{errors.driver}</p>
       )}
 
-      <div className="p-5 rounded-2xl bg-[#12141C]/60 backdrop-blur-md border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-2.5 text-xs text-[#94A3B8]">
-          <Star size={18} className="text-[#D4AF37]" />
-          <span>All chauffeurs undergo rigorous background checks and executive driving training.</span>
+      <div className="p-5 rounded-2xl bg-secondary border border-border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-2.5 text-xs text-muted">
+          <Star size={18} className="text-gold-500" />
+          <span>{t('booking.chauffeur_info', 'All chauffeurs undergo rigorous background checks and executive driving training.')}</span>
         </div>
         <Button
           size="lg"
@@ -141,7 +144,7 @@ export const Step3Chauffeur: React.FC<Step3ChauffeurProps> = ({
           rightIcon={<ArrowRight size={18} />}
           className="w-full sm:w-auto"
         >
-          Review Booking
+          {t('booking.reviewBooking', 'Review Booking')}
         </Button>
       </div>
     </div>

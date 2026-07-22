@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Acasă",
+    "activity": "Activitate",
+    "account": "Cont",
+    "wallet": "Portofel",
+    "support": "Suport"
+  },
+  "home": {
+    "whereTo": "Încotro?",
+    "recentDestinations": "Destinații recente",
+    "savedPlaces": "Locații salvate",
+    "chooseRide": "Alege cursa",
+    "bookNow": "Rezervă Acum",
+    "airportTransfer": "Transfer Aeroport",
+    "hourlyHire": "Închiriere cu ora"
+  },
+  "theme": {
+    "light": "Mod Luminos",
+    "dark": "Mod Întunecat"
+  },
+  "booking": {
+    "selectVehicle": "Selectează Vehiculul",
+    "passengers": "Pasageri",
+    "luggage": "Bagaje",
+    "hourly": "Pe oră",
+    "perDay": "Pe Zi",
+    "selectChauffeur": "Selectează Șoferul",
+    "languages": "Limbi",
+    "experience": "Experiență",
+    "years": "Ani",
+    "reviewBooking": "Revizuiește Rezervarea",
+    "pickup": "Preluare",
+    "dropoff": "Destinație",
+    "dateAndTime": "Data și Ora",
+    "confirm": "Confirmă și Plătește",
+    "max": "Max",
+    "pax": "Pax",
+    "bags": "Bagaje",
+    "estimatedFare": "Tarif Estimat",
+    "selected": "Selectat",
+    "selectClass": "Selectează Clasa",
+    "select_fleet": "Selectează Clasa Vehiculului",
+    "choose_vehicle": "Alege vehiculul potrivit pentru călătoria ta.",
+    "distance": "Distanță",
+    "est_time": "Timp Estimat",
+    "fleet_info": "Toate vehiculele sunt echipate cu Wi-Fi 5G, apă minerală și ziare zilnice.",
+    "choose_chauffeur": "Selectează profesionistul preferat pentru călătorie.",
+    "trips": "curse",
+    "chauffeur_info": "Toți șoferii sunt supuși unor verificări riguroase și antrenamentelor executive.",
+    "confirm_details": "Confirmă detaliile și blochează rezervarea.",
+    "whereHeading": "Încotro te îndrepți?",
+    "enterDestination": "Introdu destinația și selectează când dorești să fii preluat.",
+    "wherePickup": "De unde să te preluăm?",
+    "enterPickup": "Oferă locația exactă de preluare și numărul de pasageri.",
+    "headingTo": "Către:",
+    "selectFleet": "Selectează Flota",
+    "passenger": "pasager"
+  },
+  "trip": {
+    "status": "Status",
+    "driver": "Șofer",
+    "vehicle": "Vehicul",
+    "eta": "ETA",
+    "track": "Urmărește Cursa",
+    "cancel": "Anulează Cursa"
+  }
+}

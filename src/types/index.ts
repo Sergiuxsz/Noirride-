@@ -53,9 +53,12 @@ export interface Ride {
   status: RideStatus;
   price: number;
   notes?: string;
-  createdAt: string;
+  createdAt?: string;
   routePolyline?: { lat: number; lng: number }[];
+  etaSeconds?: number;
   currentEta?: number;
+  pickupEtaSeconds?: number;
+  tripEtaSeconds?: number;
 }
 
 export interface BookingFormState {

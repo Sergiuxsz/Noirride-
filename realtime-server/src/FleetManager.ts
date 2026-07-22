@@ -15,12 +15,7 @@ export interface DriverState {
   currentRideId: string | null;
 }
 
-const DEFAULT_VIP_DRIVERS: Record<string, { id: string; name: string; location: Location }> = {
-  'drv-1': { id: 'drv-1', name: 'Vin Diesel', location: { lat: 44.4268, lng: 26.1025 } },
-  'drv-2': { id: 'drv-2', name: 'Jason Statham', location: { lat: 44.4411, lng: 26.0964 } },
-  'drv-3': { id: 'drv-3', name: 'Jeremy Meeks', location: { lat: 44.4172, lng: 26.0664 } },
-  'drv-4': { id: 'drv-4', name: 'Baroian Sergiu-Ioan', location: { lat: 44.4715, lng: 26.0822 } }
-};
+
 
 export class FleetManager {
   private static drivers = new Map<string, DriverState>();
@@ -36,40 +31,22 @@ export class FleetManager {
       if (!snapshot.empty) {
         snapshot.forEach(doc => {
           const data = doc.data();
-          const vipDef = DEFAULT_VIP_DRIVERS[data.id];
-          if (vipDef) {
-            this.drivers.set(vipDef.id, {
-              id: vipDef.id,
-              name: vipDef.name, // Force correct canonical name
-              location: data.location || vipDef.location,
-              isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
-              destination: data.destination || null,
-              queuedRide: null,
-              currentRideId: null
-            });
-          }
+          this.drivers.set(doc.id, {
+            id: doc.id,
+            name: data.name || doc.id,
+            location: data.location || { lat: 44.4268, lng: 26.1025 }, // Fallback to Bucharest center
+            isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
+            destination: data.destination || null,
+            queuedRide: null,
+            currentRideId: null
+          });
         });
       }
     } catch (err: any) {
-      console.warn('[FleetManager] Firestore load notice, applying default VIP fleet:', err.message);
+      console.error('[FleetManager] Firestore load failed:', err.message);
     }
 
-    // Ensure all 4 drivers are present
-    Object.values(DEFAULT_VIP_DRIVERS).forEach(vip => {
-      if (!this.drivers.has(vip.id)) {
-        this.drivers.set(vip.id, {
-          id: vip.id,
-          name: vip.name,
-          location: vip.location,
-          isAvailable: true,
-          destination: null,
-          queuedRide: null,
-          currentRideId: null
-        });
-      }
-    });
-
-    console.log(`[FleetManager] Synchronized ${this.drivers.size} canonical VIP drivers into memory:`, Array.from(this.drivers.values()).map(d => d.name));
+    console.log(`[FleetManager] Synchronized ${this.drivers.size} drivers into memory from Firestore:`, Array.from(this.drivers.values()).map(d => d.name));
     await this.syncToRedis();
   }
 

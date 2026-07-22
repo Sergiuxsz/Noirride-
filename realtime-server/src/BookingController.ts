@@ -69,6 +69,9 @@ export const dispatchBooking = async (req: Request, res: Response) => {
 
     FleetManager.setDriverBusy(driver.id, finalDestCoords, rideId);
 
+    const pickupEtaSeconds = routeToPickup.duration;
+    const tripEtaSeconds = routeToDest.duration;
+
     // Update the existing ride in Firestore with the route data, no auto-simulation
     try {
       if (rideRef) {
@@ -76,8 +79,10 @@ export const dispatchBooking = async (req: Request, res: Response) => {
           driverId: driver.id,
           driverName: driver.name,
           status: 'EN_ROUTE', // Status matches production expectation
-          etaSeconds: totalEtaSeconds,
-          currentEta: totalEtaSeconds,
+          pickupEtaSeconds,
+          tripEtaSeconds,
+          etaSeconds: pickupEtaSeconds, // Primary ETA for EN_ROUTE (arrival at pickup)
+          currentEta: pickupEtaSeconds,
           pickup: finalPickupCoords, // Save exact coordinates for frontend map
           destinationCoords: finalDestCoords,
           routePolyline: fullRawGeometry // Drawn on frontend maps immediately
