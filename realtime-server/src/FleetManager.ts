@@ -1,6 +1,6 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
 import { Location } from './types';
-import { redis, SafeRedis } from './redis';
+import { SafeRTDB } from './rtdb';
 import { EventEmitter } from 'events';
 
 export const fleetEvents = new EventEmitter();
@@ -15,60 +15,54 @@ export interface DriverState {
   currentRideId: string | null;
 }
 
-
-
 export class FleetManager {
   private static drivers = new Map<string, DriverState>();
 
   static async initialize() {
-    console.log('[FleetManager] Loading fleet from Firestore...');
+    console.log('[FleetManager] Loading fleet from RTDB...');
     this.drivers.clear();
 
     try {
-      const db = getFirestore('noirride');
-      const snapshot = await db.collection('drivers').get();
-      
-      if (!snapshot.empty) {
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          this.drivers.set(doc.id, {
-            id: doc.id,
-            name: data.name || doc.id,
-            location: data.location || { lat: 44.4268, lng: 26.1025 }, // Fallback to Bucharest center
-            isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
-            destination: data.destination || null,
-            queuedRide: null,
-            currentRideId: null
-          });
+      if (SafeRTDB.isConnected()) {
+        const db = getDatabase();
+        const driversRef = db.ref('drivers');
+        
+        // Load initial state and keep listening for any changes
+        driversRef.on('value', (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const activeIds = new Set<string>();
+            Object.keys(data).forEach(id => {
+              const d = data[id];
+              activeIds.add(id);
+              this.drivers.set(id, {
+                id,
+                name: d.name || id,
+                location: d.location || { lat: 44.4268, lng: 26.1025 },
+                isAvailable: d.isAvailable !== undefined ? d.isAvailable : true,
+                destination: d.destination || null,
+                queuedRide: d.queuedRide || null,
+                currentRideId: d.currentRideId || null
+              });
+            });
+            // Remove drivers that are no longer in RTDB
+            for (const key of this.drivers.keys()) {
+              if (!activeIds.has(key)) {
+                this.drivers.delete(key);
+              }
+            }
+          } else {
+            this.drivers.clear();
+          }
+        }, (error) => {
+          console.error('[FleetManager] RTDB listener error:', error);
         });
+
+        console.log(`[FleetManager] Synchronized and listening to drivers from RTDB.`);
       }
     } catch (err: any) {
-      console.error('[FleetManager] Firestore load failed:', err.message);
+      console.error('[FleetManager] RTDB load failed:', err.message);
     }
-
-    console.log(`[FleetManager] Synchronized ${this.drivers.size} drivers into memory from Firestore:`, Array.from(this.drivers.values()).map(d => d.name));
-    await this.syncToRedis();
-  }
-
-  static async syncToRedis() {
-    try {
-      const driversArr = Array.from(this.drivers.values());
-      await SafeRedis.safeSet('fleet_state', JSON.stringify(driversArr));
-    } catch (err) {
-      console.error('[FleetManager] Failed to sync fleet to Redis:', err);
-    }
-  }
-
-  static async getDriversFromRedis(): Promise<DriverState[]> {
-    try {
-      const data = await SafeRedis.safeGet('fleet_state');
-      if (data) {
-        return JSON.parse(data) as DriverState[];
-      }
-    } catch (err) {
-      console.error('[FleetManager] Failed to get fleet from Redis:', err);
-    }
-    return Array.from(this.drivers.values());
   }
 
   static getDrivers(): DriverState[] {
@@ -82,20 +76,37 @@ export class FleetManager {
   static updateDriverLocation(id: string, location: Location) {
     const driver = this.drivers.get(id);
     if (driver) {
-      driver.location = location;
-      // Note: We avoid syncing location to Redis 60x/sec to prevent Upstash quota issues.
-      // Location updates go through WebSocket. Redis only tracks the core state.
+      driver.location = location; // Optimistic update
+      try {
+        if (SafeRTDB.isConnected()) {
+          const db = getDatabase();
+          db.ref(`drivers/${id}/location`).set(location).catch(err => {
+            console.error('[FleetManager] Error updating location in RTDB:', err);
+          });
+        }
+      } catch (err) {}
     }
   }
 
   static async setDriverBusy(id: string, destination: Location, rideId: string) {
     const driver = this.drivers.get(id);
     if (driver) {
-      driver.isAvailable = false;
+      driver.isAvailable = false; // Optimistic update
       driver.destination = destination;
       driver.currentRideId = rideId;
       
-      await this.syncToRedis();
+      try {
+        if (SafeRTDB.isConnected()) {
+          const db = getDatabase();
+          db.ref(`drivers/${id}`).update({
+            isAvailable: false,
+            destination,
+            currentRideId: rideId,
+            status: 'busy'
+          }).catch(() => {});
+        }
+      } catch (err) {}
+
       this.publishStatusChange(id, 'BUSY');
     }
   }
@@ -103,11 +114,22 @@ export class FleetManager {
   static async setDriverAvailable(id: string) {
     const driver = this.drivers.get(id);
     if (driver) {
-      driver.isAvailable = true;
+      driver.isAvailable = true; // Optimistic update
       driver.destination = null;
       driver.currentRideId = null;
 
-      await this.syncToRedis();
+      try {
+        if (SafeRTDB.isConnected()) {
+          const db = getDatabase();
+          db.ref(`drivers/${id}`).update({
+            isAvailable: true,
+            destination: null,
+            currentRideId: null,
+            status: 'available'
+          }).catch(() => {});
+        }
+      } catch (err) {}
+
       this.publishStatusChange(id, 'AVAILABLE');
     }
   }
@@ -115,17 +137,22 @@ export class FleetManager {
   private static publishStatusChange(driverId: string, status: 'AVAILABLE' | 'BUSY') {
     fleetEvents.emit('status_change', { driverId, status });
     try {
-      redis.publish('fleet_updates', JSON.stringify({
-        type: 'STATUS_CHANGE',
-        driverId,
-        status
-      }));
+      if (SafeRTDB.isConnected()) {
+        const db = getDatabase();
+        db.ref('fleet_updates').push({
+          type: 'STATUS_CHANGE',
+          driverId,
+          status,
+          timestamp: Date.now()
+        });
+      }
     } catch (err) {
-      console.error('[FleetManager] Failed to publish status change to Redis:', err);
+      console.error('[FleetManager] Failed to publish status change to RTDB:', err);
     }
   }
 
   static syncDriverStatus(id: string, status: 'AVAILABLE' | 'BUSY') {
+    // Left for backwards compatibility if needed, though RTDB listener handles state now.
     const driver = this.drivers.get(id);
     if (driver) {
       driver.isAvailable = status === 'AVAILABLE';

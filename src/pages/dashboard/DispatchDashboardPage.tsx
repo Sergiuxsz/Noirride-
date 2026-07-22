@@ -26,6 +26,16 @@ export const DispatchDashboardPage: React.FC = () => {
 
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
+  // Sync selectedRide with live updates from Firestore (via rides array)
+  React.useEffect(() => {
+    if (selectedRide) {
+      const liveRide = rides.find(r => r.id === selectedRide.id);
+      if (liveRide && JSON.stringify(liveRide) !== JSON.stringify(selectedRide)) {
+        setSelectedRide(liveRide);
+      }
+    }
+  }, [rides, selectedRide]);
+
   return (
     <div className="min-h-[calc(100vh-65px)] pb-16 animate-fade-in">
       <div className="container-custom pt-6 space-y-6">

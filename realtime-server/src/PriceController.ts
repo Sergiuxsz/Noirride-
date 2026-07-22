@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { SafeRedis } from './redis';
+import { SafeRTDB } from './rtdb';
 
 export interface VehicleRate {
   id: string;
@@ -72,20 +72,20 @@ export const calculatePriceHandler = async (req: Request, res: Response) => {
 
     let redisErrorOccurred = false;
 
-    // Try reading cached calculation from Redis
+    // Try reading cached calculation from RTDB
     try {
-      const cached = await SafeRedis.safeGet(cacheKey);
+      const cached = await SafeRTDB.safeGet(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         return res.json({
           ...parsed,
           redisCacheHit: true,
           redisErrorHandled: false,
-          redisConnected: SafeRedis.isConnected()
+          redisConnected: SafeRTDB.isConnected()
         });
       }
     } catch (err: any) {
-      console.warn('[PriceController] Redis cache read failed, falling back to calculation:', err.message || err);
+      console.warn('[PriceController] RTDB cache read failed, falling back to calculation:', err.message || err);
       redisErrorOccurred = true;
     }
 
@@ -124,14 +124,14 @@ export const calculatePriceHandler = async (req: Request, res: Response) => {
       total,
       currency: 'USD',
       redisCacheHit: false,
-      redisErrorHandled: redisErrorOccurred || !SafeRedis.isConnected(),
-      redisConnected: SafeRedis.isConnected()
+      redisErrorHandled: redisErrorOccurred || !SafeRTDB.isConnected(),
+      redisConnected: SafeRTDB.isConnected()
     };
 
-    // Cache calculation in Redis asynchronously with 1-hour TTL
-    if (SafeRedis.isConnected()) {
-      SafeRedis.safeSet(cacheKey, JSON.stringify(priceResult), 3600).catch((err) => {
-        console.warn('[PriceController] SafeRedis write cache failed silently:', err.message || err);
+    // Cache calculation in RTDB asynchronously with 1-hour TTL
+    if (SafeRTDB.isConnected()) {
+      SafeRTDB.safeSet(cacheKey, JSON.stringify(priceResult), 3600).catch((err) => {
+        console.warn('[PriceController] SafeRTDB write cache failed silently:', err.message || err);
       });
     }
 

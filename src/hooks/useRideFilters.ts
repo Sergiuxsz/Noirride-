@@ -32,9 +32,9 @@ export const useRideFilters = () => {
         if (sortField === 'price') {
           return sortOrder === 'asc' ? a.price - b.price : b.price - a.price;
         } else {
-          // Sort by date + time
-          const timeA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`).getTime();
-          const timeB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`).getTime();
+          // Sort by creation time to ensure newest bookings are always at the top
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
           return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
         }
       });

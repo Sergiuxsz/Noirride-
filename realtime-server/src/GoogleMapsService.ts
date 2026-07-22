@@ -9,6 +9,9 @@ export class GoogleMapsService {
    * Geocodes a text address into Location (lng, lat)
    */
   static async geocodeAddress(address: string): Promise<Location> {
+    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+    const GOOGLE_GEOCODING_API_KEY = process.env.GOOGLE_GEOCODING_API_KEY || GOOGLE_MAPS_API_KEY;
+
     if (!GOOGLE_GEOCODING_API_KEY) {
       console.warn('[GoogleMapsService] Nu este setată GOOGLE_GEOCODING_API_KEY. Folosesc coordonate fallback pentru', address);
       return { lat: 44.4268, lng: 26.1025 }; // Fallback București centru
@@ -35,6 +38,8 @@ export class GoogleMapsService {
    * Gets driving route considering real-time traffic using Directions API
    */
   static async getRoute(start: Location, end: Location): Promise<{ duration: number, routeGeometry: Location[], rawGeometry: Location[] }> {
+    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+    
     if (!GOOGLE_MAPS_API_KEY) {
       console.warn('[GoogleMapsService] Nu este setată GOOGLE_MAPS_API_KEY. Folosesc rută fallback.');
       return {

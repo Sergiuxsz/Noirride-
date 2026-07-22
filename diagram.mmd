@@ -1,0 +1,39 @@
+graph TD
+    %% Frontend Clients
+    ClientApp[Client Web App - React]
+    DispatchApp[Dispatch Dashboard - React]
+
+    %% Backend Layer 1: Core Logic
+    subgraph Firebase Cloud
+        Functions[Cloud Functions - API]
+        Firestore[(Firestore - SSOT)]
+        Auth[Firebase Auth]
+    end
+
+    %% Backend Layer 2: Telemetry & Simulation
+    subgraph Realtime Server Node.js
+        REST_API[REST API /api/dispatch]
+        SimEngine[Simulation Engine]
+        FleetWS[WebSocket Server]
+        Redis[(Redis Cache)]
+    end
+
+    %% High Frequency DB
+    RTDB[(Firebase Realtime DB)]
+
+    %% Connections
+    ClientApp -- "1. Login / Register" --> Auth
+    ClientApp -- "2. Book Ride (api.createBooking)" --> Functions
+    DispatchApp -- "Update Status / View" --> Functions
+    
+    Functions -- "3. Save Ride Data" --> Firestore
+    Firestore -- "4. onSnapshot (Live Updates)" --> ClientApp
+    Firestore -- "4. onSnapshot (Live Updates)" --> DispatchApp
+
+    Functions -- "5. Trigger Dispatch (Axios)" --> REST_API
+    REST_API -- "6. Start Route Simulation" --> SimEngine
+    SimEngine -- "7. Write 1Hz Telemetry" --> RTDB
+    
+    RTDB -- "8. Broadcast Coordinates" --> FleetWS
+    FleetWS -- "9. Live Map Data" --> DispatchApp
+    FleetWS -- "9. Live Map Data" --> ClientApp

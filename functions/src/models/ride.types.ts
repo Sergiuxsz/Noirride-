@@ -9,6 +9,7 @@ export interface VehicleModel {
   passengers: number;
   luggage: number;
   basePrice: number;
+  ratePerKm: number;
   ratePerHour: number;
   image: string;
   features: string[];

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { useBooking } from '../../hooks/useBooking';
+import { useAuth } from '../../context/AuthContext';
 import { reverseGeocode } from '../../services/googlePlaces';
 import type { ServiceType } from '../../types';
 
@@ -16,9 +17,11 @@ import { Step5Success } from './steps/Step5Success';
 
 export const BookRidePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     bookingState, updateField,
-    selectVehicle, calculatePrice, confirmBooking, vehicles, drivers
+    selectVehicle, calculatePrice, confirmBooking, vehicles, drivers,
+    isRehydratingDraft
   } = useBooking();
 
   // Step machine: 0 = homepage (cards visible), 1-5 = booking steps
@@ -35,10 +38,30 @@ export const BookRidePage: React.FC = () => {
   const [passengers, setPassengers] = useState(bookingState.passengers || 2);
 
   // Step 4: Credentials
-  const [customerName, setCustomerName] = useState('Victoria Kensington');
-  const [customerEmail, setCustomerEmail] = useState('v.kensington@kensington-capital.com');
-  const [customerPhone, setCustomerPhone] = useState('+1 (555) 234-5678');
+  const [customerName, setCustomerName] = useState(user?.fullName || '');
+  const [customerEmail, setCustomerEmail] = useState(user?.email || '');
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // Sync state once rehydration completes
+  useEffect(() => {
+    if (!isRehydratingDraft) {
+      setCurrentStep(bookingState.currentStep || 0);
+      setDestinationInput(bookingState.destination || '');
+      setPickupInput(bookingState.pickupLocation || '');
+      setPassengers(bookingState.passengers || 2);
+      if (bookingState.date) setCustomDate(bookingState.date);
+      if (bookingState.time) setCustomTime(bookingState.time);
+    }
+  }, [isRehydratingDraft]);
+
+  useEffect(() => {
+    if (user) {
+      setCustomerName(prev => prev || user.fullName || '');
+      setCustomerEmail(prev => prev || user.email || '');
+      setCustomerPhone(prev => prev || user.phone || '');
+    }
+  }, [user]);
 
   // UI state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,6 +92,7 @@ export const BookRidePage: React.FC = () => {
   useEffect(() => {
     const handleReset = () => {
       setCurrentStep(0);
+      updateField('currentStep', 0);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     window.addEventListener('resetBookingStep', handleReset);
@@ -100,6 +124,7 @@ export const BookRidePage: React.FC = () => {
 
   const goTo = (step: number) => {
     setCurrentStep(step);
+    updateField('currentStep', step);
   };
 
   const goBack = () => {
@@ -208,9 +233,10 @@ export const BookRidePage: React.FC = () => {
       setIsSuccess(true);
       goTo(6);
       setTimeout(() => navigate('/trip-details'), 1800);
-    } catch {
+    } catch (err: any) {
       setIsLoading(false);
       isSubmittingRef.current = false;
+      setErrors({ submit: err.message || 'Failed to dispatch reservation. Please try again.' });
     }
   };
 
@@ -231,10 +257,10 @@ export const BookRidePage: React.FC = () => {
     : null;
   const priceBreakdown = selectedVehicle ? calculatePrice(selectedVehicle.id) : { base: 0, serviceFee: 0, tax: 0, total: 0 };
 
-  if (isLoading) {
+  if (isLoading || isRehydratingDraft) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center container-custom">
-        <LoadingState message="Dispatching reservation to secure chauffeur network..." />
+        <LoadingState message={isRehydratingDraft ? "Restoring your secure session..." : "Dispatching reservation to secure chauffeur network..."} />
       </div>
     );
   }

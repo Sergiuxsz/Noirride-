@@ -59,7 +59,11 @@ export const api = {
 
   async updateRideStatus(rideId: string, status: RideStatus, notes?: string): Promise<{ success: boolean; message: string }> {
     const callable = httpsCallable<{ rideId: string; status: RideStatus; notes?: string }, { success: boolean; message: string }>(functions, 'updateRideStatus');
-    const response = await callable({ rideId, status, notes });
+    const payload: { rideId: string; status: RideStatus; notes?: string } = { rideId, status };
+    if (notes != null) {
+      payload.notes = notes;
+    }
+    const response = await callable(payload);
     return response.data;
   },
 
@@ -127,7 +131,7 @@ export const api = {
   ): Promise<any> {
     const serverUrl = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:8080';
     try {
-      const response = await fetch(`${serverUrl}/api/rides/simulate`, {
+      const response = await fetch(`${serverUrl}/api/dispatch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

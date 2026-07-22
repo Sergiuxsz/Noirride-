@@ -69,6 +69,11 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Credentials Form */}
         <div className="lg:col-span-7">
+          {errors.submit && (
+            <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+              {errors.submit}
+            </div>
+          )}
           <form onSubmit={handleStep4Confirm} className="p-6 rounded-2xl bg-secondary border border-border flex flex-col gap-5">
             <h3 className="font-serif text-lg font-bold text-content border-b border-border pb-3">
               {t('booking.passengerCredentials', 'Passenger Credentials')}

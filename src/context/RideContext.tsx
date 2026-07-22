@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Ride, BookingFormState, RideStatus, Vehicle, Driver } from '../types';
+import { db, rtdb } from '../lib/firebase';
 import { api } from '../services/api';
+import { collection, onSnapshot, query as firestoreQuery, where, documentId } from 'firebase/firestore';
+import { ref, onChildAdded, query as rtdbQuery, startAt, orderByChild, get, set } from 'firebase/database';
+import { useAuth } from './AuthContext';
 
 import vindieselPhoto from '../assets/vindiesel.png';
 import stathamPhoto from '../assets/statham.png';
@@ -181,6 +185,7 @@ interface RideContextType {
   cancelConfirmedRide: () => void;
   updateRideStatus: (rideId: string, status: RideStatus, notes?: string) => void;
   resetBooking: () => void;
+  isRehydratingDraft: boolean;
 }
 
 const defaultBookingState: BookingFormState = {
@@ -196,55 +201,132 @@ const defaultBookingState: BookingFormState = {
 const RideContext = createContext<RideContextType | undefined>(undefined);
 
 export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const auth = useAuth();
+  const userId = auth?.user?.uid || 'guest';
+  const isAdmin = auth?.isAdmin;
+
+  const getStorageKey = (base: string) => `${base}_${userId}`;
+
   const [vehicles, setVehicles] = useState<Vehicle[]>(DEFAULT_VEHICLES);
   const [drivers, setDrivers] = useState<Driver[]>(DEFAULT_DRIVERS);
-  const [rides, setRides] = useState<Ride[]>(() => {
-    const saved = localStorage.getItem('noir_rides_data');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [remotePrices, setRemotePrices] = useState<Record<string, { base: number; serviceFee: number; tax: number; total: number }>>({});
 
-  const [activeBooking, setActiveBooking] = useState<BookingFormState>(() => {
-    const saved = localStorage.getItem('noir_active_booking');
-    return saved ? JSON.parse(saved) : defaultBookingState;
+  const [rides, setRides] = useState<Ride[]>(() => {
+    const saved = localStorage.getItem(getStorageKey('noir_rides_cache'));
+    return saved ? JSON.parse(saved) : [];
   });
-
+  const [activeBooking, setActiveBooking] = useState<BookingFormState>(defaultBookingState);
   const [confirmedRide, setConfirmedRide] = useState<Ride | null>(() => {
-    const saved = localStorage.getItem('noir_confirmed_ride');
+    const saved = localStorage.getItem(getStorageKey('noir_rides_cache'));
     if (!saved) return null;
     try {
-      const parsed = JSON.parse(saved);
-      // Sanitize driver name if legacy
-      const matched = DEFAULT_DRIVERS.find((d) => d.id === parsed.driverId || d.name === parsed.driverName);
-      if (matched) {
-        parsed.driverName = matched.name;
-        parsed.driverId = matched.id;
-      } else {
-        parsed.driverName = DEFAULT_DRIVERS[0].name;
-        parsed.driverId = DEFAULT_DRIVERS[0].id;
-      }
-      return parsed;
+      const parsedRides = JSON.parse(saved);
+      const active = parsedRides.find((r: Ride) => 
+        (isAdmin ? r.userId === userId : true) && 
+        ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status)
+      );
+      return active || null;
     } catch {
       return null;
     }
   });
+  const [persistedRideId, setPersistedRideId] = useState<string | null>(() => localStorage.getItem(getStorageKey('noir_active_ride_id')));
 
-  useEffect(() => {
-    localStorage.setItem('noir_rides_data', JSON.stringify(rides));
-  }, [rides]);
+  const [draftBookingId, setDraftBookingId] = useState<string | null>(null);
+  const [isRehydratingDraft, setIsRehydratingDraft] = useState(true);
 
+  // Sync state when userId changes
   useEffect(() => {
-    localStorage.setItem('noir_active_booking', JSON.stringify(activeBooking));
-  }, [activeBooking]);
+    const ridesStr = localStorage.getItem(getStorageKey('noir_rides_cache'));
+    const initialRides = ridesStr ? JSON.parse(ridesStr) : [];
+    setRides(initialRides);
 
-  useEffect(() => {
-    if (confirmedRide) {
-      localStorage.setItem('noir_confirmed_ride', JSON.stringify(confirmedRide));
+    if (initialRides.length > 0) {
+      const active = initialRides.find((r: Ride) => 
+        (isAdmin ? r.userId === userId : true) && 
+        ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status)
+      );
+      setConfirmedRide(active || null);
     } else {
-      localStorage.removeItem('noir_confirmed_ride');
+      setConfirmedRide(null);
     }
-  }, [confirmedRide]);
+
+    // Clear old format keys
+    localStorage.removeItem('noir_rides_data');
+    localStorage.removeItem('noir_confirmed_ride');
+
+    const initializeDraftBooking = async () => {
+      setIsRehydratingDraft(true);
+      const cachedId = localStorage.getItem(getStorageKey('noir_draft_booking_id'));
+      if (cachedId) {
+        try {
+          const snapshot = await get(ref(rtdb, `draft_bookings/${cachedId}`));
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const now = Date.now();
+            const age = now - (data.updatedAt || 0);
+            
+            // Validate: expires after 12 hours (43200000 ms)
+            if (age < 43200000 && data.state) {
+              console.log('[NOIRRIDE PROTOCOL] Restored draft booking from RTDB:', cachedId);
+              setActiveBooking(data.state);
+              setDraftBookingId(cachedId);
+              setIsRehydratingDraft(false);
+              return;
+            } else {
+              console.warn('[NOIRRIDE PROTOCOL] Draft booking expired or invalid, cleaning up.');
+              await set(ref(rtdb, `draft_bookings/${cachedId}`), null);
+            }
+          }
+        } catch (error) {
+          console.error('[NOIRRIDE PROTOCOL] Failed to fetch draft booking from RTDB', error);
+        }
+      }
+      
+      // Fallback: new draft id and local state
+      const newDraftId = `draft-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      setDraftBookingId(newDraftId);
+      localStorage.setItem(getStorageKey('noir_draft_booking_id'), newDraftId);
+      
+      const localFallbackStr = localStorage.getItem(getStorageKey('noir_active_booking'));
+      setActiveBooking(localFallbackStr ? JSON.parse(localFallbackStr) : defaultBookingState);
+      setIsRehydratingDraft(false);
+    };
+
+    initializeDraftBooking();
+
+    const rid = localStorage.getItem(getStorageKey('noir_active_ride_id'));
+    setPersistedRideId(rid || null);
+  }, [userId]);
+
+  useEffect(() => {
+    localStorage.setItem(getStorageKey('noir_rides_cache'), JSON.stringify(rides));
+  }, [rides, userId]);
+
+  useEffect(() => {
+    localStorage.setItem(getStorageKey('noir_active_booking'), JSON.stringify(activeBooking));
+
+    if (draftBookingId && !isRehydratingDraft) {
+      // RTDB does not accept undefined values, so we sanitize the object
+      const sanitizedState = Object.fromEntries(
+        Object.entries(activeBooking).filter(([_, v]) => v !== undefined)
+      );
+
+      set(ref(rtdb, `draft_bookings/${draftBookingId}`), {
+        state: sanitizedState,
+        updatedAt: Date.now(),
+        userId: userId
+      }).catch(err => console.warn('[NOIRRIDE PROTOCOL] Error syncing draft to RTDB (Check Firebase Rules):', err.message));
+    }
+  }, [activeBooking, draftBookingId, isRehydratingDraft, userId]);
+
+  useEffect(() => {
+    if (persistedRideId) {
+      localStorage.setItem(getStorageKey('noir_active_ride_id'), persistedRideId);
+    } else {
+      localStorage.removeItem(getStorageKey('noir_active_ride_id'));
+    }
+  }, [persistedRideId, userId]);
 
   // Sync Redis remote distance fare calculations
   useEffect(() => {
@@ -278,9 +360,9 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     syncRedisPrices();
-  }, [vehicles, activeBooking.serviceType, activeBooking.distanceMeters, activeBooking.durationSeconds]);
+  }, [vehicles, activeBooking.serviceType, activeBooking.distanceMeters, activeBooking.durationSeconds, userId, isAdmin, confirmedRide?.id]);
 
-  // Sync live fleet status from Realtime Server and WebSocket
+  // Sync live fleet status from Realtime Server
   useEffect(() => {
     const fetchFleet = async () => {
       try {
@@ -299,123 +381,152 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           });
         }
-
-        const activeRides = await api.getActiveRides();
-        if (activeRides && activeRides.length > 0) {
-          setRides((prev) => {
-            const newRides = [...prev];
-            activeRides.forEach((activeRide: any) => {
-              const rideId = activeRide.id || activeRide.rideId;
-              const existingIdx = newRides.findIndex(r => r.id === rideId);
-              if (existingIdx >= 0) {
-                newRides[existingIdx] = {
-                  ...newRides[existingIdx],
-                  ...activeRide,
-                  id: rideId
-                };
-              } else {
-                newRides.push({
-                  ...activeRide,
-                  id: rideId
-                });
-              }
-            });
-            return newRides;
-          });
-        }
       } catch (err) {
-        console.warn('[NOIRRIDE PROTOCOL] Could not sync initial fleet/rides status', err);
+        console.warn('[NOIRRIDE PROTOCOL] Could not sync initial fleet status', err);
       }
     };
 
     fetchFleet();
 
-    // Setup global WebSocket connection for real-time status sync
-    let ws: WebSocket | null = null;
-    let reconnectTimeout: number | undefined;
-
-    const connectWs = () => {
-      const serverUrl = import.meta.env.VITE_REALTIME_SERVER_WS_URL || 'ws://localhost:8080/ws/fleet';
-      ws = new WebSocket(serverUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          
-          if (parsed.type === 'STATUS_CHANGE') {
-            const isBusy = parsed.status === 'BUSY' || parsed.status === 'busy';
-            setDrivers(prevDrivers => 
-              prevDrivers.map(d => 
-                d.id === parsed.driverId 
-                  ? { ...d, status: isBusy ? 'BUSY' : 'AVAILABLE' } 
-                  : d
-              )
-            );
-
-            // Deselect driver if they become busy
-            setActiveBooking((prev) => {
-              if (prev.selectedDriverId === parsed.driverId && isBusy) {
-                return { ...prev, selectedDriverId: undefined };
-              }
-              return prev;
+    let q;
+    if (isAdmin) {
+      q = collection(db, 'rides');
+    } else if (userId !== 'guest') {
+      q = firestoreQuery(collection(db, 'rides'), where('userId', '==', userId));
+    } else if (persistedRideId) {
+      q = firestoreQuery(collection(db, 'rides'), where(documentId(), '==', persistedRideId));
+    }
+    
+    let unsubscribeRides: () => void;
+    if (q) {
+      unsubscribeRides = onSnapshot(q, (snapshot) => {
+        const fetchedRides = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ride));
+        // Sort by creation date descending (newest first)
+        fetchedRides.sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        if (userId === 'guest') {
+          // Guests only fetch their active ride, so we must merge it into the cache to not lose history
+          setRides((prev) => {
+            const merged = new Map(prev.map(r => [r.id, r]));
+            fetchedRides.forEach(r => merged.set(r.id, r));
+            const arr = Array.from(merged.values());
+            arr.sort((a, b) => {
+              const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return timeB - timeA;
             });
-          } 
-          else if (parsed.type === 'RIDE_STATUS_CHANGE') {
-            setRides((prev) => {
-              const newRides = [...prev];
-              const existingIdx = newRides.findIndex(r => r.id === parsed.rideId);
-              if (existingIdx >= 0) {
-                newRides[existingIdx] = { ...newRides[existingIdx], status: parsed.status };
-              }
-              return newRides;
-            });
-            setConfirmedRide((prev) => (prev && prev.id === parsed.rideId ? { ...prev, status: parsed.status } : prev));
-          } 
-          else if (parsed.type === 'RIDE_ADDED') {
-            setRides((prev) => {
-              const newRides = [...prev];
-              const existingIdx = newRides.findIndex(r => r.id === parsed.ride.id);
-              if (existingIdx === -1) {
-                newRides.unshift(parsed.ride);
-              }
-              return newRides;
-            });
-          } 
-          else if (parsed.type === 'RIDE_COMPLETED') {
-            setRides((prev) => {
-              const newRides = [...prev];
-              const existingIdx = newRides.findIndex(r => r.id === parsed.rideId);
-              if (existingIdx >= 0) {
-                newRides[existingIdx] = { ...newRides[existingIdx], status: 'COMPLETED' };
-              }
-              return newRides;
-            });
-            setConfirmedRide((prev) => (prev && prev.id === parsed.rideId ? { ...prev, status: 'COMPLETED' } : prev));
-            
-            // Re-mark driver available after ride completion
-            setDrivers(prevDrivers => 
-              prevDrivers.map(d => 
-                d.id === parsed.driverId ? { ...d, status: 'AVAILABLE' } : d
-              )
-            );
+            return arr;
+          });
+        } else {
+          // Preserve existing rides if no new data fetched to keep active ride visible
+          if (fetchedRides.length > 0) {
+            setRides(fetchedRides);
+          } else {
+            setRides(prev => prev);
           }
-        } catch (e) {
-          console.warn('[NOIRRIDE PROTOCOL] WebSocket parse error in RideContext:', e);
         }
-      };
+        
+        if (!isAdmin) {
+          if (fetchedRides.length > 0) {
+            const active = fetchedRides.find(r => ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status));
+            const selected = active || null;
+            setConfirmedRide(selected);
+            if (userId === 'guest') {
+              setPersistedRideId(selected ? selected.id : null);
+            }
+          } else {
+            // No rides fetched. Fall back to any cached active ride if present
+            setRides((prevRides) => {
+              const cachedActive = prevRides.find(r => ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status));
+              if (cachedActive) {
+                setConfirmedRide(cachedActive);
+                if (userId === 'guest') {
+                  setPersistedRideId(cachedActive.id);
+                }
+              } else {
+                setConfirmedRide(null);
+                if (userId === 'guest') {
+                  setPersistedRideId(null);
+                }
+              }
+              return prevRides;
+            });
+          }
+        } else {
+          // Admin needs to see their own active rides too if they're acting as a client
+          const adminOwnActive = fetchedRides.find(r => r.userId === userId && ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status));
+          
+          setConfirmedRide((prev) => {
+            if (adminOwnActive) return adminOwnActive;
+            if (!prev) return null;
+            const updated = fetchedRides.find(r => r.id === prev.id);
+            return updated || prev;
+          });
+        }
+      });
+    } else {
+      unsubscribeRides = () => {};
+    }
 
-      ws.onclose = () => {
-        reconnectTimeout = window.setTimeout(connectWs, 3000);
-      };
-    };
+    // Setup global RTDB connection for real-time status sync
+    const fleetUpdatesRef = rtdbQuery(
+      ref(rtdb, 'fleet_updates'), 
+      orderByChild('timestamp'), 
+      startAt(Date.now())
+    );
 
-    connectWs();
+    const unsubscribe = onChildAdded(fleetUpdatesRef, (snapshot) => {
+      try {
+        const parsed = snapshot.val();
+        if (!parsed) return;
+        
+        if (parsed.type === 'STATUS_CHANGE') {
+          const isBusy = parsed.status === 'BUSY' || parsed.status === 'busy';
+          setDrivers(prevDrivers => 
+            prevDrivers.map(d => 
+              d.id === parsed.driverId 
+                ? { ...d, status: isBusy ? 'BUSY' : 'AVAILABLE' } 
+                : d
+            )
+          );
+
+          // Deselect driver if they become busy
+          setActiveBooking((prev) => {
+            if (prev.selectedDriverId === parsed.driverId && isBusy) {
+              return { ...prev, selectedDriverId: undefined };
+            }
+            return prev;
+          });
+        } 
+        else if (parsed.type === 'RIDE_STATUS_CHANGE') {
+          // Handled natively by Firestore onSnapshot
+        } 
+        else if (parsed.type === 'RIDE_ADDED') {
+          // Handled natively by Firestore onSnapshot
+        } 
+        else if (parsed.type === 'RIDE_COMPLETED') {
+          // Ride array update handled natively by Firestore onSnapshot
+          
+          // Re-mark driver available after ride completion
+          setDrivers(prevDrivers => 
+            prevDrivers.map(d => 
+              d.id === parsed.driverId ? { ...d, status: 'AVAILABLE' } : d
+            )
+          );
+        }
+      } catch (e) {
+        console.warn('[NOIRRIDE PROTOCOL] RTDB parse error in RideContext:', e);
+      }
+    });
 
     return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (ws) ws.close();
+      unsubscribeRides();
+      unsubscribe();
     };
-  }, []);
+  }, [userId, isAdmin, persistedRideId]);
 
   // Fetch Vehicles
   useEffect(() => {
@@ -481,6 +592,15 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const confirmBooking = async (customerDetails: { name: string; email: string; phone: string; specialRequests?: string }): Promise<Ride> => {
+    // Prevent multiple active bookings for the same user
+    const hasActiveRide = rides.some(r => 
+      r.customerEmail === customerDetails.email && 
+      ['SCHEDULED', 'EN_ROUTE', 'IN_PROGRESS'].includes(r.status)
+    );
+    if (hasActiveRide) {
+      throw new Error("You already have an active reservation. Please complete or cancel it before booking a new dispatch.");
+    }
+
     const vehicle = vehicles.find((v) => v.id === activeBooking.selectedVehicleId) || vehicles[0];
     const driver = drivers.find((d) => d.id === activeBooking.selectedDriverId) || drivers.find((d) => d.status === 'AVAILABLE') || drivers[0];
     
@@ -558,6 +678,14 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetBooking = () => {
     setActiveBooking(defaultBookingState);
     setConfirmedRide(null);
+    
+    // Clear draft booking
+    if (draftBookingId) {
+      set(ref(rtdb, `draft_bookings/${draftBookingId}`), null).catch(() => {});
+      const newDraftId = `draft-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      setDraftBookingId(newDraftId);
+      localStorage.setItem(getStorageKey('noir_draft_booking_id'), newDraftId);
+    }
   };
 
   return (
@@ -575,6 +703,7 @@ export const RideProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cancelConfirmedRide,
         updateRideStatus,
         resetBooking,
+        isRehydratingDraft,
       }}
     >
       {children}

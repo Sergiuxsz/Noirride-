@@ -4,6 +4,7 @@ import type { Ride } from '../../types';
 import { RideStatusBadge } from './RideStatusBadge';
 import { EmptyState } from '../ui/EmptyState';
 import { useTranslation } from 'react-i18next';
+import { useRideContext } from '../../context/RideContext';
 
 interface RidesTableProps {
   rides: Ride[];
@@ -17,6 +18,7 @@ export const RidesTable: React.FC<RidesTableProps> = ({
   onResetFilters,
 }) => {
   const { t } = useTranslation();
+  const { drivers } = useRideContext();
 
   if (rides.length === 0) {
     return (
@@ -45,7 +47,7 @@ export const RidesTable: React.FC<RidesTableProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-border text-xs text-content">
-          {rides.map((ride) => (
+          {Array.from(new Map(rides.map(r => [r.id, r])).values()).map((ride) => (
             <tr
               key={ride.id}
               onClick={() => onSelectRide(ride)}
@@ -87,7 +89,19 @@ export const RidesTable: React.FC<RidesTableProps> = ({
               {/* Vehicle & Driver */}
               <td className="py-4 px-5">
                 <div className="font-medium text-content">{ride.vehicleName}</div>
-                <div className="text-muted">{ride.driverName}</div>
+                <div className="text-muted flex items-center gap-2">
+                  {(() => {
+                    const activeDriver = drivers.find(d => d.id === ride.driverId);
+                    return activeDriver ? (
+                      <>
+                        <img src={activeDriver.photo} alt={activeDriver.name} className="w-5 h-5 rounded-full object-cover border border-border" />
+                        <span>{activeDriver.name}</span>
+                      </>
+                    ) : (
+                      <span>{ride.driverName}</span>
+                    );
+                  })()}
+                </div>
               </td>
 
               {/* Status */}

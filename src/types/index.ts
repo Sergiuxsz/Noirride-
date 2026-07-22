@@ -36,6 +36,7 @@ export interface Driver {
 
 export interface Ride {
   id: string;
+  userId?: string;
   customerName: string;
   customerPhone: string;
   customerEmail: string;
@@ -78,6 +79,7 @@ export interface BookingFormState {
   customerEmail?: string;
   customerPhone?: string;
   specialRequests?: string;
+  currentStep?: number;
 }
 
 export type UserRole = 'client' | 'driver' | 'dispatcher' | 'admin';

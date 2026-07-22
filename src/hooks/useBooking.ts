@@ -13,6 +13,7 @@ export const useBooking = () => {
     confirmBooking,
     cancelConfirmedRide,
     resetBooking,
+    isRehydratingDraft,
   } = useRideContext();
 
   const validateBookingForm = () => {
@@ -38,5 +39,6 @@ export const useBooking = () => {
     confirmBooking,
     cancelConfirmedRide,
     resetBooking,
+    isRehydratingDraft,
   };
 };

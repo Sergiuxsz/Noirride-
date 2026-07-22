@@ -4,19 +4,23 @@ import http from 'http';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import dotenv from 'dotenv';
-import { connectRedis } from './redis';
-import { FleetWebSocket } from './FleetWebSocket';
+dotenv.config();
+
+import { getDatabase } from 'firebase-admin/database';
 import { dispatchBooking } from './BookingController';
 import { calculatePriceHandler } from './PriceController';
 import { FleetManager } from './FleetManager';
+import { SimulationEngine } from './SimulationEngine';
 
-dotenv.config();
+const DEFAULT_RTDB_URL = process.env.FIREBASE_DATABASE_URL || 'https://genial-charter-477621-j2-default-rtdb.firebaseio.com/';
 
 // Inițializare Firebase Admin
 if (!getApps().length) {
   try {
-    initializeApp();
-    console.log('[RealtimeServer] Firebase Admin initializat cu succes.');
+    initializeApp({
+      databaseURL: DEFAULT_RTDB_URL
+    });
+    console.log(`[RealtimeServer] Firebase Admin initializat cu succes. (DB: ${DEFAULT_RTDB_URL})`);
   } catch (err: any) {
     console.warn('[RealtimeServer] Firebase initialization failed:', err.message);
   }
@@ -27,10 +31,6 @@ app.use(cors());
 app.use(express.json());
 
 const server = http.createServer(app);
-import axios from 'axios';
-
-// Inițializare WebSocket Gateway cu Redis Pub/Sub
-const fleetWs = new FleetWebSocket(server);
 
 // Init fleet state and seed active dispatch routes
 FleetManager.initialize().then(() => {
@@ -39,22 +39,43 @@ FleetManager.initialize().then(() => {
     const db = getFirestore('noirride');
     db.collection('rides').onSnapshot((snapshot) => {
       snapshot.docChanges().forEach((change) => {
+        const rtdb = getDatabase();
         if (change.type === 'modified') {
           const data = change.doc.data();
-          
-          // Broadcast status change to clients securely
-          fleetWs.broadcast(JSON.stringify({
+          rtdb.ref('fleet_updates').push({
             type: 'RIDE_STATUS_CHANGE',
             rideId: change.doc.id,
             status: data.status,
-            notes: data.notes
-          }));
+            notes: data.notes,
+            timestamp: Date.now()
+          });
+
+          // Decouple rider & driver on completion/cancellation
+          if (data.status === 'CANCELLED' || data.status === 'COMPLETED') {
+            if (data.driverId) {
+              FleetManager.setDriverAvailable(data.driverId);
+              SimulationEngine.stopSimulation(data.driverId);
+            }
+          }
+
         } else if (change.type === 'added') {
           const data = change.doc.data();
-          fleetWs.broadcast(JSON.stringify({
+          rtdb.ref('fleet_updates').push({
             type: 'RIDE_ADDED',
-            ride: { id: change.doc.id, ...data }
-          }));
+            ride: { id: change.doc.id, ...data },
+            timestamp: Date.now()
+          });
+          
+          if (data.status === 'SCHEDULED' && !data.routePolyline) {
+            console.log(`[Dispatch] Triggering local simulation for new ride: ${change.doc.id}`);
+            const axios = require('axios');
+            axios.post('http://127.0.0.1:8080/api/dispatch', {
+              rideId: change.doc.id,
+              pickupLocation: data.pickupLocation,
+              destination: data.destination,
+              preferredDriverId: data.driverId
+            }).catch((e: any) => console.error('[Local Trigger] Dispatch failed', e.message));
+          }
         }
       });
     });
@@ -81,13 +102,11 @@ app.get('/api/rides/active', async (req, res) => {
   }
 });
 
-app.get('/api/rides/:id', (req, res) => {
-  res.status(404).json({ error: 'Endpoint deprecated' });
-});
+// Deprecated /api/rides/:id endpoint removed — use Firestore onSnapshot instead.
 
 app.get('/api/fleet', async (req, res) => {
   try {
-    const drivers = await FleetManager.getDriversFromRedis();
+    const drivers = FleetManager.getDrivers();
     res.json(drivers);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch fleet status' });
@@ -100,9 +119,22 @@ const PORT = process.env.PORT || 8080;
 
 const startServer = async () => {
   try {
-    // Attempt Redis connection without aborting server if Redis is down/unreachable
-    await connectRedis().catch((err) => {
-      console.warn('[Server Boot] Redis connection failed, continuing with in-memory fallbacks:', err.message || err);
+    try {
+      const db = getDatabase();
+      await db.ref('.info/connected').once('value');
+      console.log('[Server Boot] RTDB connected successfully');
+    } catch (err: any) {
+      console.warn('[Server Boot] RTDB connection failed, continuing with in-memory fallbacks:', err.message || err);
+    }
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[Server] Port ${PORT} is already in use. Kill the other process or use a different port.`);
+        process.exit(1);
+      } else {
+        console.error('[Server] HTTP server error:', err);
+        process.exit(1);
+      }
     });
 
     server.listen(PORT, () => {

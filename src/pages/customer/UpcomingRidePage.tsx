@@ -13,10 +13,10 @@ import type { RideStatus } from '../../types';
 
 export const UpcomingRidePage: React.FC = () => {
   const navigate = useNavigate();
-  const { confirmedRide, cancelConfirmedRide, updateRideStatus } = useRideContext();
+  const { confirmedRide, rides, cancelConfirmedRide, updateRideStatus } = useRideContext();
   const { t } = useTranslation();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const activeTrip = confirmedRide;
+  const activeTrip = confirmedRide || rides.find(r => ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(r.status)) || null;
 
   const [etaSeconds, setEtaSeconds] = useState<number>(() => {
     return activeTrip?.currentEta ?? activeTrip?.etaSeconds ?? activeTrip?.pickupEtaSeconds ?? 300;
@@ -73,7 +73,12 @@ export const UpcomingRidePage: React.FC = () => {
   };
 
   const handleConfirmCancel = () => {
-    cancelConfirmedRide();
+    if (confirmedRide) {
+      cancelConfirmedRide();
+    } else if (activeTrip) {
+      // Fallback cancellation when confirmedRide is not set but an active ride exists
+      updateRideStatus(activeTrip.id, 'CANCELLED');
+    }
     setIsCancelModalOpen(false);
   };
 

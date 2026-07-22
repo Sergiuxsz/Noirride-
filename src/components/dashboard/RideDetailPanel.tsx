@@ -4,6 +4,7 @@ import type { Ride, RideStatus } from '../../types';
 import { RideStatusBadge } from './RideStatusBadge';
 import { TripTimeline } from '../booking/TripTimeline';
 import { Button } from '../ui/Button';
+import { useRideContext } from '../../context/RideContext';
 import { useTranslation } from 'react-i18next';
 
 interface RideDetailPanelProps {
@@ -18,6 +19,7 @@ export const RideDetailPanel: React.FC<RideDetailPanelProps> = ({
   onUpdateStatus,
 }) => {
   const { t } = useTranslation();
+  const { drivers } = useRideContext();
   const [notes, setNotes] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
@@ -170,7 +172,24 @@ export const RideDetailPanel: React.FC<RideDetailPanelProps> = ({
               </div>
               <div>
                 <span className="block text-muted">{t('dispatch.vettedChauffeur', 'Vetted Chauffeur')}</span>
-                <span className="font-semibold text-sm text-content">{ride.driverName}</span>
+                <span className="font-semibold text-sm text-content flex items-center gap-2 mt-1">
+                  {(() => {
+                    const activeDriver = drivers.find(d => d.id === ride.driverId);
+                    return activeDriver ? (
+                      <>
+                        <img src={activeDriver.photo} alt={activeDriver.name} className="w-5 h-5 rounded-full object-cover border border-border" />
+                        <span>{activeDriver.name}</span>
+                        {activeDriver.status === 'BUSY' ? (
+                          <span className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-widest ml-2">En Route</span>
+                        ) : (
+                          <span className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest ml-2">Available</span>
+                        )}
+                      </>
+                    ) : (
+                      <span>{ride.driverName}</span>
+                    );
+                  })()}
+                </span>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, rtdb } from '../../lib/firebase';
+import { ref, onChildAdded, onValue, query, startAt, orderByChild } from 'firebase/database';
 import { useGoogleMapsScript } from '../../hooks/useGoogleMapsScript';
 import { getVehicleMarkerSVG } from '../map/VehicleMarkerIcons';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,9 @@ interface ActiveRouteGraphics {
   polyline: google.maps.Polyline;
   pickupMarker: google.maps.marker.AdvancedMarkerElement;
   destMarker: google.maps.marker.AdvancedMarkerElement;
+  driverId?: string;
+  customerName?: string;
+  etaSeconds?: number;
 }
 
 const DRIVER_COLORS: Record<string, string> = {
@@ -44,6 +48,21 @@ export const FleetLiveMap: React.FC = () => {
   const routesRef = useRef<Map<string, ActiveRouteGraphics>>(new Map());
   const animationRef = useRef<number>();
   const { t } = useTranslation();
+
+  const updateDriverLabel = (driver: DriverState) => {
+    if (!driver.container || !driver.container.firstChild) return;
+    let labelText = driver.name;
+    if (driver.status === 'busy') {
+      const activeRoute = Array.from(routesRef.current.values()).find(r => r.driverId === driver.id);
+      if (activeRoute && activeRoute.customerName) {
+        const eta = activeRoute.etaSeconds ? ` (ETA: ${Math.ceil(activeRoute.etaSeconds / 60)} min)` : '';
+        labelText = `${driver.name} | ${activeRoute.customerName}${eta}`;
+      } else {
+        labelText = `${driver.name} ${t('dispatch.busy', '(Busy)')}`;
+      }
+    }
+    (driver.container.firstChild as HTMLElement).innerText = labelText;
+  };
 
   // Initialize Map
   useEffect(() => {
@@ -80,23 +99,25 @@ export const FleetLiveMap: React.FC = () => {
     setMap(newMap);
   }, [isLoaded]);
 
-  // Handle Firestore Telemetry (Drivers)
+  // Handle RTDB Telemetry (Drivers)
   useEffect(() => {
     if (!map || !isLoaded) return;
 
-    const unsubscribeDrivers = onSnapshot(collection(db, 'drivers'), (snapshot) => {
+    const driversRefNode = ref(rtdb, 'drivers');
+    const unsubscribeDrivers = onValue(driversRefNode, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
       const now = performance.now();
       const currentDocIds = new Set<string>();
 
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        if (!data.location) return; // Ignore drivers without location
+      Object.keys(data).forEach((id) => {
+        const driverData = data[id];
+        if (!driverData.location) return; // Ignore drivers without location
 
-        const id = doc.id;
         currentDocIds.add(id);
-        const coords = data.location;
-        const driverName = data.name || id;
-        const status = data.isAvailable ? 'available' : 'busy';
+        const coords = driverData.location;
+        const driverName = driverData.name || id;
+        const status = (driverData.isAvailable ?? true) ? 'available' : 'busy';
 
         const existing = driversRef.current.get(id);
 
@@ -109,7 +130,7 @@ export const FleetLiveMap: React.FC = () => {
           container.style.alignItems = 'center';
 
           const label = document.createElement('div');
-          label.innerText = status === 'busy' ? `${driverName} ${t('dispatch.busy', '(Busy)')}` : driverName;
+          label.innerText = driverName;
           label.style.color = '#FFFFFF';
           label.style.fontFamily = 'sans-serif';
           label.style.fontSize = '12px';
@@ -131,7 +152,7 @@ export const FleetLiveMap: React.FC = () => {
             zIndex: status === 'available' ? 50 : 100
           });
 
-          driversRef.current.set(id, {
+          const newDriver: DriverState = {
             id,
             name: driverName,
             status,
@@ -142,7 +163,9 @@ export const FleetLiveMap: React.FC = () => {
             marker,
             container,
             carElement
-          });
+          };
+          driversRef.current.set(id, newDriver);
+          updateDriverLabel(newDriver);
         } else {
           // Update position interpolation targets
           const elapsed = (now - existing.lastUpdate) / 1000;
@@ -168,16 +191,11 @@ export const FleetLiveMap: React.FC = () => {
             existing.marker.zIndex = status === 'busy' ? 100 : 50;
           }
 
-          // Update label conditionally
-          if (existing.container && existing.container.firstChild) {
-             (existing.container.firstChild as HTMLElement).innerText = status === 'busy'
-               ? `${existing.name} ${t('dispatch.busy', '(Busy)')}` 
-               : existing.name;
-          }
+          updateDriverLabel(existing);
         }
       });
 
-      // Cleanup drivers that are no longer in Firestore
+      // Cleanup drivers that are no longer in RTDB
       driversRef.current.forEach((driver, id) => {
         if (!currentDocIds.has(id)) {
           if (driver.marker) driver.marker.map = null;
@@ -248,10 +266,20 @@ export const FleetLiveMap: React.FC = () => {
               zIndex: 200
             });
 
-            routesRef.current.set(rideId, { polyline, pickupMarker, destMarker });
+            routesRef.current.set(rideId, { polyline, pickupMarker, destMarker, driverId });
             
             // Optional: gently pan to the new route pickup
             map.panTo(pickupCoords);
+          }
+
+          const routeObj = routesRef.current.get(rideId);
+          if (routeObj) {
+            routeObj.customerName = data.customerName;
+            routeObj.etaSeconds = data.currentEta ?? data.etaSeconds ?? data.pickupEtaSeconds;
+            routeObj.driverId = data.driverId;
+            
+            const driver = driversRef.current.get(data.driverId);
+            if (driver) updateDriverLabel(driver);
           }
         } else {
           const routeObj = routesRef.current.get(rideId);
@@ -277,6 +305,55 @@ export const FleetLiveMap: React.FC = () => {
 
     return () => {
       unsubscribeRides();
+    };
+  }, [map, isLoaded]);
+
+  // Handle RTDB Telemetry
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const fleetUpdatesRef = query(
+      ref(rtdb, 'fleet_updates'),
+      orderByChild('timestamp'),
+      startAt(Date.now())
+    );
+
+    const unsubscribe = onChildAdded(fleetUpdatesRef, (snapshot) => {
+      try {
+        const parsed = snapshot.val();
+        if (!parsed) return;
+
+        if (parsed.type === 'LOCATION_UPDATE' && parsed.driverId) {
+          const driver = driversRef.current.get(parsed.driverId);
+          if (driver) {
+            driver.startPos = { lat: driver.targetPos.lat, lng: driver.targetPos.lng };
+            driver.targetPos = parsed.location;
+            driver.lastUpdate = performance.now();
+
+            if (parsed.location.lat !== driver.startPos.lat || parsed.location.lng !== driver.startPos.lng) {
+              const dy = parsed.location.lat - driver.startPos.lat;
+              const dx = parsed.location.lng - driver.startPos.lng;
+              let bearing = Math.atan2(dx, dy) * 180 / Math.PI;
+              if (bearing < 0) bearing += 360;
+              driver.bearing = bearing;
+            }
+          }
+
+          if (parsed.rawGeometry) {
+            routesRef.current.forEach((routeObj) => {
+              if (routeObj.driverId === parsed.driverId) {
+                routeObj.polyline.setPath(parsed.rawGeometry);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('[FleetLiveMap] RTDB parse error:', e);
+      }
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, [map, isLoaded]);
 

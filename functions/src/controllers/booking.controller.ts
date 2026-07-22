@@ -93,6 +93,44 @@ export const updateRideStatus = onCall(async (request) => {
     }
 
     const { rideId, status, notes } = parseResult.data;
+    
+    // Validate State Machine
+    const currentRide = await rideRepo.getById(rideId);
+    if (!currentRide) {
+      throw new AppError('not-found', `Ride ${rideId} not found.`);
+    }
+
+    const currentStatus = currentRide.status;
+    let isValidTransition = false;
+
+    if (status === 'CANCELLED') {
+      // Can cancel from any non-terminal state
+      isValidTransition = ['SCHEDULED', 'EN_ROUTE', 'ARRIVED', 'IN_PROGRESS'].includes(currentStatus);
+    } else {
+      switch (currentStatus) {
+        case 'SCHEDULED':
+          isValidTransition = status === 'EN_ROUTE';
+          break;
+        case 'EN_ROUTE':
+          isValidTransition = status === 'ARRIVED';
+          break;
+        case 'ARRIVED':
+          isValidTransition = status === 'IN_PROGRESS';
+          break;
+        case 'IN_PROGRESS':
+          isValidTransition = status === 'COMPLETED';
+          break;
+        case 'COMPLETED':
+        case 'CANCELLED':
+          isValidTransition = false; // Terminal states
+          break;
+      }
+    }
+
+    if (!isValidTransition) {
+      throw new AppError('failed-precondition', `Invalid status transition from ${currentStatus} to ${status}`);
+    }
+
     const sanitizedNotes = sanitizeInputString(notes || '', 300);
     await rideRepo.updateStatus(rideId, status, sanitizedNotes);
     return { success: true, message: `Ride ${rideId} updated to ${status}.` };

@@ -7,15 +7,25 @@ import { Input } from '../../components/ui/Input';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useBooking } from '../../hooks/useBooking';
+import { useAuth } from '../../context/AuthContext';
 
 export const BookingReviewPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { bookingState, calculatePrice, confirmBooking, vehicles } = useBooking();
 
-  const [customerName, setCustomerName] = useState('Victoria Kensington');
-  const [customerEmail, setCustomerEmail] = useState('v.kensington@kensington-capital.com');
-  const [customerPhone, setCustomerPhone] = useState('+1 (555) 234-5678');
+  const [customerName, setCustomerName] = useState(user?.fullName || '');
+  const [customerEmail, setCustomerEmail] = useState(user?.email || '');
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  React.useEffect(() => {
+    if (user) {
+      setCustomerName(prev => prev || user.fullName || '');
+      setCustomerEmail(prev => prev || user.email || '');
+      setCustomerPhone(prev => prev || user.phone || '');
+    }
+  }, [user]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -108,7 +118,7 @@ export const BookingReviewPage: React.FC = () => {
         <div className="flex items-center justify-between border-b border-border pb-6">
           <div>
             <button
-              onClick={() => navigate('/select-vehicle')}
+              onClick={() => navigate('/fleet')}
               className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-gold-500 mb-2 transition-colors"
             >
               <ArrowLeft size={14} /> Back to Fleet Selection

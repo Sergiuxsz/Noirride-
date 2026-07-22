@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, rtdb } from '../../lib/firebase';
+import { ref, onChildAdded, query, startAt, orderByChild } from 'firebase/database';
 import { useGoogleMapsScript } from '../../hooks/useGoogleMapsScript';
 import { getVehicleMarkerSVG } from '../map/VehicleMarkerIcons';
 import { getDriverColor } from '../dashboard/FleetLiveMap';
@@ -46,8 +47,6 @@ export const ClientLiveMap: React.FC<Props> = ({
   const routePolylineRef = useRef<google.maps.Polyline | null>(null);
   const carElementRef = useRef<HTMLDivElement | null>(null);
 
-  const socket = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<number>();
   const activeDriverId = useRef<string | null>(null);
 
   // Initialize Map
@@ -144,50 +143,39 @@ export const ClientLiveMap: React.FC<Props> = ({
     };
   }, [rideId, onTelemetryUpdate, isConnected]);
 
-  // Handle Socket & Telemetry via Native WebSocket
+  // Handle Telemetry via Native RTDB
   useEffect(() => {
     if (!map || !isLoaded) return;
 
-    const connectWs = () => {
-      const serverUrl = import.meta.env.VITE_REALTIME_SERVER_WS_URL || 'ws://localhost:8080/ws/fleet';
-      const ws = new WebSocket(serverUrl);
-      socket.current = ws;
+    setIsConnected(true);
 
-      ws.onopen = () => {
-        setIsConnected(true);
-      };
+    const fleetUpdatesRef = query(
+      ref(rtdb, 'fleet_updates'),
+      orderByChild('timestamp'),
+      startAt(Date.now())
+    );
 
-      ws.onclose = () => {
-        setIsConnected(false);
-        reconnectTimeout.current = window.setTimeout(() => connectWs(), 3000);
-      };
+    const unsubscribe = onChildAdded(fleetUpdatesRef, (snapshot) => {
+      try {
+        const parsed = snapshot.val();
+        if (!parsed) return;
 
-      ws.onerror = (err) => {
-        console.error('[ClientLiveMap] WebSocket error:', err);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (parsed.type === 'LOCATION_UPDATE' && parsed.driverId === activeDriverId.current) {
-            setTelemetry((prev: any) => ({
-              ...prev,
-              lat: parsed.location.lat,
-              lng: parsed.location.lng,
-              rawGeometry: parsed.rawGeometry || prev?.rawGeometry
-            }));
-          }
-        } catch (e) {
-          console.error('[ClientLiveMap] Message parse error:', e);
+        if (parsed.type === 'LOCATION_UPDATE' && parsed.driverId === activeDriverId.current) {
+          setTelemetry((prev: any) => ({
+            ...prev,
+            lat: parsed.location.lat,
+            lng: parsed.location.lng,
+            rawGeometry: parsed.rawGeometry || prev?.rawGeometry
+          }));
         }
-      };
-    };
-
-    connectWs();
+      } catch (e) {
+        console.error('[ClientLiveMap] RTDB parse error:', e);
+      }
+    });
 
     return () => {
-      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
-      if (socket.current) socket.current.close();
+      unsubscribe();
+      setIsConnected(false);
     };
   }, [map, isLoaded]);
 

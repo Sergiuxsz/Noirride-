@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import { getFirestore } from 'firebase-admin/firestore';
 import { GoogleMapsService } from './GoogleMapsService';
 import { FleetManager } from './FleetManager';
+import { SimulationEngine } from './SimulationEngine';
 
 export const dispatchBooking = async (req: Request, res: Response) => {
   try {
     const { rideId, pickupLocation, destination, pickupCoords, destCoords, preferredDriverId } = req.body as any;
-    
+
     if (!rideId || !pickupLocation || !destination) {
       return res.status(400).json({ error: 'Missing rideId, pickupLocation, or destination.' });
     }
@@ -15,7 +16,7 @@ export const dispatchBooking = async (req: Request, res: Response) => {
     try {
       const db = getFirestore('noirride');
       rideRef = db.collection('rides').doc(rideId);
-    } catch(err) {
+    } catch (err) {
       console.warn('[Dispatch] Error fetching Firestore:', err);
     }
 
@@ -23,10 +24,10 @@ export const dispatchBooking = async (req: Request, res: Response) => {
     const finalPickupCoords = pickupCoords || await GoogleMapsService.geocodeAddress(pickupLocation);
     const finalDestCoords = destCoords || await GoogleMapsService.geocodeAddress(destination);
 
-    const driver = preferredDriverId 
-      ? FleetManager.getDriver(preferredDriverId) 
+    const driver = preferredDriverId
+      ? FleetManager.getDriver(preferredDriverId)
       : FleetManager.findBestDriver(finalPickupCoords);
-    
+
     if (!driver) {
       return res.status(404).json({ error: 'Toți șoferii noștri sunt complet ocupați cu comenzi în așteptare.' });
     }
@@ -40,7 +41,7 @@ export const dispatchBooking = async (req: Request, res: Response) => {
         pickupLocation,
         destination
       };
-      
+
       if (rideRef) {
         await rideRef.set({
           driverId: driver.id,
@@ -88,14 +89,8 @@ export const dispatchBooking = async (req: Request, res: Response) => {
           routePolyline: fullRawGeometry // Drawn on frontend maps immediately
         }, { merge: true });
       }
-      
-      const db = getFirestore('noirride');
-      await db.collection('drivers').doc(driver.id).set({
-        location: driver.location,
-        status: 'busy',
-        currentRideId: rideId,
-        lastUpdate: Date.now()
-      }, { merge: true });
+      // Start the end-to-end backend simulation which updates RTDB at 1Hz
+      SimulationEngine.startSimulation(driver.id, rideId, fullRawGeometry, totalEtaSeconds);
 
     } catch (err: any) {
       console.warn('[Dispatch] Could not update ride in Firestore.', err.message);

@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDD3Pf7qtX0cLgaL8JMU7yIj0aRqao4va4",
@@ -15,6 +16,7 @@ const firebaseConfig = {
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {}, 'noirride');
+export const rtdb = getDatabase(app);
 export const functions = getFunctions(app, 'us-central1');
 
 // Connect to Local Emulators ONLY when VITE_USE_EMULATOR is explicitly set to 'true'
@@ -25,6 +27,7 @@ if (import.meta.env.VITE_USE_EMULATOR === 'true') {
     // Connect to Auth and Firestore Emulators if running locally
     connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
     connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    connectDatabaseEmulator(rtdb, '127.0.0.1', 9000);
     console.info('[NOIRRIDE PROTOCOL] Connected to Firebase Local Emulator Suite.');
   } catch (err) {
     console.warn('[NOIRRIDE PROTOCOL] Emulator connection already initialized or skipped:', err);
