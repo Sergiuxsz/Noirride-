@@ -1,4 +1,5 @@
 import { getDatabase } from 'firebase-admin/database';
+import { getFirestore } from 'firebase-admin/firestore';
 import { SafeRTDB } from './rtdb';
 import { Location } from './types';
 import { FleetManager } from './FleetManager';
@@ -39,7 +40,7 @@ export class SimulationEngine {
   public static startSimulation(driverId: string, rideId: string, rawGeometry: Location[], durationSec: number) {
     this.startCleanupLoop();
     this.stopSimulation(driverId);
-    const sim = new SimulationEngine(driverId, rawGeometry, durationSec);
+    const sim = new SimulationEngine(driverId, rideId, rawGeometry, durationSec);
     this.activeSimulations.set(driverId, sim);
     sim.start();
   }
@@ -58,14 +59,18 @@ export class SimulationEngine {
   private segmentDistances: number[] = [];
   private totalDistance: number = 0;
   private driverId: string;
+  private rideId: string;
   private isRunning: boolean = false;
+  private lastFirestoreUpdate: number = 0;
 
   constructor(
     driverId: string,
+    rideId: string,
     rawGeometry: Location[],
     durationSec: number
   ) {
     this.driverId = driverId;
+    this.rideId = rideId;
     this.rawGeometry = rawGeometry;
     this.durationSec = durationSec || 300; // default 5 mins if not provided
     this.calculateDistances();
@@ -146,7 +151,9 @@ export class SimulationEngine {
       }
     }
 
-    this.publishUpdate(currentPosition, remainingPolyline);
+    const currentEta = Math.max(0, Math.floor(this.durationSec - elapsedSec));
+
+    this.publishUpdate(currentPosition, remainingPolyline, currentEta);
 
     if (this.isRunning) {
       // 1-second update rate to conserve RTDB bandwidth
@@ -154,10 +161,22 @@ export class SimulationEngine {
     }
   }
 
-  private publishUpdate(location: Location, remainingPolyline: Location[]) {
+  private publishUpdate(location: Location, remainingPolyline: Location[], currentEta: number) {
     try {
       // Update in-memory state so subsequent lookups (and eventual Redis syncs) are accurate
       FleetManager.updateDriverLocation(this.driverId, location);
+
+      const now = Date.now();
+      if (now - this.lastFirestoreUpdate >= 5000) {
+        this.lastFirestoreUpdate = now;
+        try {
+          const dbFs = getFirestore('noirride');
+          dbFs.collection('rides').doc(this.rideId).update({ currentEta })
+            .catch(err => console.warn('[SimulationEngine] Error updating ETA in Firestore:', err.message));
+        } catch (err: any) {
+           console.warn('[SimulationEngine] Error getting Firestore:', err.message);
+        }
+      }
 
       if (SafeRTDB.isConnected()) {
         const db = getDatabase();

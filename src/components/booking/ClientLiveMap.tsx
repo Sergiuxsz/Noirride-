@@ -229,32 +229,14 @@ export const ClientLiveMap: React.FC<Props> = ({
     map.fitBounds(bounds, { top: 40, right: 40, bottom: 140, left: 40 });
   };
 
-  // Fallback Route Drawing if Directions available or rawGeometry emitted
+  // Route Drawing via Telemetry (Raw Geometry)
   useEffect(() => {
     if (!map || !isLoaded || stateRef.current.routeDrawn) return;
 
     if (telemetry && telemetry.rawGeometry && telemetry.rawGeometry.length > 0) {
       drawRoutePolyline(telemetry.rawGeometry);
-      return;
     }
-
-    if (pickupLocation && destination && window.google?.maps?.DirectionsService) {
-      const directionsService = new google.maps.DirectionsService();
-      directionsService.route(
-        {
-          origin: pickupLocation,
-          destination: destination,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === 'OK' && result?.routes[0]?.overview_path) {
-            const path = result.routes[0].overview_path.map((p) => ({ lat: p.lat(), lng: p.lng() }));
-            drawRoutePolyline(path);
-          }
-        }
-      );
-    }
-  }, [map, isLoaded, telemetry, pickupLocation, destination]);
+  }, [map, isLoaded, telemetry]);
 
   // Sync Telemetry position & vehicle marker
   useEffect(() => {
