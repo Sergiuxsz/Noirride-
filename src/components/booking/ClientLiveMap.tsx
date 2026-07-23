@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, rtdb } from '../../lib/firebase';
-import { ref, onChildAdded, query, startAt, orderByChild } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { useGoogleMapsScript } from '../../hooks/useGoogleMapsScript';
 import { getVehicleMarkerSVG } from '../map/VehicleMarkerIcons';
 import { getDriverColor } from '../dashboard/FleetLiveMap';
