@@ -189,8 +189,8 @@ interface RideContextType {
 }
 
 const defaultBookingState: BookingFormState = {
-  pickupLocation: 'Four Seasons Downtown, 27 Barclay St, NYC',
-  destination: 'JFK International Airport (Terminal 4 Private Aviation)',
+  pickupLocation: '',
+  destination: '',
   date: new Date().toISOString().split('T')[0],
   time: '19:30',
   passengers: 2,

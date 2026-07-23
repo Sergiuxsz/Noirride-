@@ -71,21 +71,29 @@ export const BookRidePage: React.FC = () => {
 
   // Auto-detect location on mount
   useEffect(() => {
+    let isCancelled = false;
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
         console.log('[Geolocation] Detected coordinates:', latitude, longitude);
         const address = await reverseGeocode(latitude, longitude);
         console.log('[Geolocation] Reversed Address:', address);
-        if (address) {
-          updateField('pickupLocation', address);
-          updateField('pickupCoordinates', { lat: latitude, lng: longitude });
-          setPickupInput(address);
+        if (address && !isCancelled) {
+          setPickupInput((prev) => {
+            // Only overwrite if it's empty or it's the old hardcoded default
+            if (!prev || prev === 'Four Seasons Downtown, 27 Barclay St, NYC') {
+              updateField('pickupLocation', address);
+              updateField('pickupCoordinates', { lat: latitude, lng: longitude });
+              return address;
+            }
+            return prev;
+          });
         }
       }, (error) => {
         console.warn('[Geolocation] failed or denied:', error);
       });
     }
+    return () => { isCancelled = true; };
   }, []);
 
   // Global reset listener for navigation buttons (Home mid-flow)
