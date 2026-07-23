@@ -115,6 +115,20 @@ export class SimulationEngine {
     if (progress >= 1.0) {
        progress = 1.0;
        this.isRunning = false; // reached end
+       
+       // Mark ride as completed in Firestore
+       try {
+         const dbFs = getFirestore('noirride');
+         dbFs.collection('rides').doc(this.rideId).update({ 
+            status: 'COMPLETED',
+            currentEta: 0
+         }).catch(err => console.warn('[SimulationEngine] Error completing ride in Firestore:', err.message));
+       } catch (err: any) {
+          console.warn('[SimulationEngine] Error getting Firestore for completion:', err.message);
+       }
+       
+       // Free the driver
+       FleetManager.setDriverAvailable(this.driverId);
     }
 
     if (this.rawGeometry.length === 0) {

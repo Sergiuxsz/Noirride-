@@ -30,6 +30,7 @@ export const ClientLiveMap: React.FC<Props> = ({
   const { isLoaded, error } = useGoogleMapsScript();
   const [isConnected, setIsConnected] = useState(false);
   const [telemetry, setTelemetry] = useState<any>(null);
+  const [activeDriverIdState, setActiveDriverIdState] = useState<string | null>(null);
   const animationRef = useRef<number>();
   
   const stateRef = useRef({
@@ -100,6 +101,7 @@ export const ClientLiveMap: React.FC<Props> = ({
       const rideData = rideDoc.data();
       const driverId = rideData.driverId;
       activeDriverId.current = driverId;
+      if (driverId) setActiveDriverIdState(driverId);
 
       const currentEtaValue = rideData.currentEta ?? rideData.etaSeconds ?? rideData.pickupEtaSeconds ?? 300;
 
@@ -143,29 +145,23 @@ export const ClientLiveMap: React.FC<Props> = ({
     };
   }, [rideId, onTelemetryUpdate, isConnected]);
 
-  // Handle Telemetry via Native RTDB
+  // Handle Telemetry via Native RTDB using Driver's node
   useEffect(() => {
-    if (!map || !isLoaded) return;
+    if (!map || !isLoaded || !activeDriverIdState) return;
 
     setIsConnected(true);
 
-    const fleetUpdatesRef = query(
-      ref(rtdb, 'fleet_updates'),
-      orderByChild('timestamp'),
-      startAt(Date.now())
-    );
-
-    const unsubscribe = onChildAdded(fleetUpdatesRef, (snapshot) => {
+    const driverRefNode = ref(rtdb, `drivers/${activeDriverIdState}`);
+    const unsubscribe = onValue(driverRefNode, (snapshot) => {
       try {
-        const parsed = snapshot.val();
-        if (!parsed) return;
-
-        if (parsed.type === 'LOCATION_UPDATE' && parsed.driverId === activeDriverId.current) {
+        if (!snapshot.exists()) return;
+        const data = snapshot.val();
+        if (data.location) {
           setTelemetry((prev: any) => ({
             ...prev,
-            lat: parsed.location.lat,
-            lng: parsed.location.lng,
-            rawGeometry: parsed.rawGeometry || prev?.rawGeometry
+            lat: data.location.lat,
+            lng: data.location.lng,
+            rawGeometry: prev?.rawGeometry
           }));
         }
       } catch (e) {
@@ -177,7 +173,7 @@ export const ClientLiveMap: React.FC<Props> = ({
       unsubscribe();
       setIsConnected(false);
     };
-  }, [map, isLoaded]);
+  }, [map, isLoaded, activeDriverIdState]);
 
   // Helper to draw polyline route
   const drawRoutePolyline = (path: google.maps.LatLngLiteral[]) => {
